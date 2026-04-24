@@ -1,1 +1,1 @@
-{"framework": "static", "buildCommand": "", "outputDirectory": "frontend", "env": {"NODE_VERSION": "18"}}
+{"version": 2, "name": "creditagent7", "build": {"command": "", "output_directory": "frontend"}}
