@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>Multi-Agent 工作流 - 皖美信用</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="../assets/css/shared.css?v=gap1">
+<link rel="stylesheet" href="../assets/css/mvp.css?v=gap1">
+<link rel="stylesheet" href="../assets/css/ai.css?v=gap1">
+<script src="../assets/js/shared.js?v=gap1"></script>
+<script src="../assets/js/interactions.js?v=gap1"></script>
+<script src="../assets/js/mock-data.js?v=gap1"></script>
+<script src="../assets/js/auth.js?v=gap1"></script>
+<script src="../assets/js/tickets.js?v=gap1"></script>
+<script src="../assets/js/phase2.js?v=gap1"></script>
+<script src="../assets/js/components.js?v=gap1"></script>
+<script src="../assets/js/ai-client.js?v=gap1"></script>
+<style>
+  /* DAG 工作流可视化 */
+  .wf-dag-node {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px;
+    background: #FFF;
+    border: 1.5px solid var(--color-border);
+    border-radius: 6px;
+    margin-bottom: 10px;
+    transition: all .25s;
+    position: relative;
+  }
+  .wf-dag-node.pending { opacity: .5; }
+  .wf-dag-node.running {
+    border-color: var(--color-primary);
+    background: linear-gradient(90deg, rgba(184,20,26,0.06), rgba(201,160,99,0.04));
+    box-shadow: 0 0 0 3px rgba(184,20,26,0.08);
+  }
+  .wf-dag-node.success {
+    border-color: var(--color-success);
+    background: rgba(43,147,72,0.05);
+  }
+  .wf-dag-node.failed {
+    border-color: var(--color-danger);
+    background: rgba(214,64,69,0.05);
+  }
+  .wf-dag-node::after {
+    content: "";
+    position: absolute;
+    left: 24px;
+    top: 100%;
+    width: 2px;
+    height: 10px;
+    background: var(--color-border);
+  }
+  .wf-dag-node:last-child::after { display: none; }
+  .wf-dag-node.success::after { background: var(--color-success); }
+  .wf-dag-ico {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-weight: 700;
+    font-size: 14px;
+  }
+  .wf-dag-node.pending .wf-dag-ico { background: #EEE; color: #999; }
+  .wf-dag-node.running .wf-dag-ico { background: var(--color-primary); color: #FFF; animation: wfPulse 1.2s infinite; }
+  .wf-dag-node.success .wf-dag-ico { background: var(--color-success); color: #FFF; }
+  .wf-dag-node.failed .wf-dag-ico { background: var(--color-danger); color: #FFF; }
+  @keyframes wfPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(184,20,26,0.5); }
+    50%      { box-shadow: 0 0 0 8px rgba(184,20,26,0); }
+  }
+  .wf-log-line {
+    padding: 6px 10px;
+    margin-bottom: 4px;
+    font-size: 12px;
+    font-family: "JetBrains Mono", "Menlo", Consolas, monospace;
+    border-left: 2px solid var(--color-border);
+    background: rgba(15,42,86,0.02);
+    word-break: break-all;
+  }
+  .wf-log-line.info    { border-color: var(--color-secondary); color: var(--color-text-2); }
+  .wf-log-line.success { border-color: var(--color-success); color: var(--color-success); }
+  .wf-log-line.warn    { border-color: var(--color-warning); color: var(--color-warning); }
+  .wf-log-line.error   { border-color: var(--color-danger); color: var(--color-danger); }
+  .wf-log-time { color: #999; margin-right: 6px; }
+  .wf-report {
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--color-text);
+  }
+  .wf-report h4 { color: var(--color-primary); font-size: 15px; font-weight: 700; margin: 12px 0 6px; }
+  .wf-report ul { padding-left: 20px; margin: 6px 0; }
+  .wf-report li { margin-bottom: 3px; }
+  .wf-progressbar {
+    width: 100%;
+    height: 6px;
+    background: #EFECE0;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 4px;
+  }
+  .wf-progressbar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+    transition: width .3s ease;
+  }
+  .wf-checkpoint-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    background: rgba(232,163,61,0.15);
+    color: var(--color-warning);
+    border: 1px solid var(--color-warning);
+    border-radius: 2px;
+    font-size: 10px;
+    letter-spacing: 1px;
+    margin-left: 8px;
+  }
+</style>
+</head>
+<body class="bg-wm-bg">
+<script>if (!window.WM_AUTH.guard()) throw new Error('not logged in');</script>
+
+<div id="topbar-root"></div>
+<script>document.getElementById('topbar-root').outerHTML = WM_C.renderAuthTopbar('workflow');</script>
+
+<main class="px-8 py-6 max-w-[1700px] mx-auto">
+    <div class="flex items-center justify-between mb-5">
+        <div>
+            <h1 class="text-2xl font-bold text-wm-secondary">🤖 Multi-Agent 智能工作流</h1>
+            <div class="text-xs text-wm-gray3 mt-1">投资尽调 · 并购尽调 · 信用全景分析等复杂任务的 AI 协同编排中心</div>
+        </div>
+        <div class="flex items-center gap-2">
+            <select class="wm-input wm-input-sm" id="workflow-template" style="width:220px;">
+                <option value="invest-dd">投资尽调（合肥 XX 储能）</option>
+                <option value="ma-dd">并购尽调（江汽 · 新能源三电）</option>
+                <option value="credit-360">信用 360° 全景分析</option>
+                <option value="risk-screen">风险穿透扫描</option>
+            </select>
+            <button class="wm-btn wm-btn-primary wm-btn-sm" id="btn-start">▶ 启动工作流</button>
+            <button class="wm-btn wm-btn-ghost wm-btn-sm" id="btn-reset">重置</button>
+        </div>
+    </div>
+
+    <!-- 顶部进度 -->
+    <div class="wm-card mb-4">
+        <div class="p-4">
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-4">
+                    <span class="text-xs text-wm-gray3">总进度</span>
+                    <span class="text-sm font-bold text-wm-secondary" id="wf-progress-text">0/0</span>
+                    <span class="text-xs text-wm-gray3">已耗时</span>
+                    <span class="text-sm font-mono text-wm-primary" id="wf-elapsed">00:00</span>
+                    <span class="text-xs text-wm-gray3">预计剩余</span>
+                    <span class="text-sm font-mono text-wm-accent" id="wf-eta">--:--</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="wm-light green wm-pulse" id="wf-status-light"></span>
+                    <span class="text-sm" id="wf-status-text">待启动</span>
+                </div>
+            </div>
+            <div class="wf-progressbar"><div class="wf-progressbar-fill" id="wf-progress-fill" style="width:0%"></div></div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-12 gap-5">
+        <!-- 左：DAG -->
+        <div class="col-span-4">
+            <div class="wm-card">
+                <div class="wm-card-header">
+                    <h3>🧩 Agent 工作流 DAG</h3>
+                    <span class="text-xs text-wm-gray3" id="wf-node-count">0 个节点</span>
+                </div>
+                <div class="p-4" id="wf-dag-container">
+                    <div class="text-center text-wm-gray3 text-sm py-12">请选择模板后启动工作流</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 中：日志 -->
+        <div class="col-span-4">
+            <div class="wm-card" style="height: 680px; display: flex; flex-direction: column;">
+                <div class="wm-card-header">
+                    <h3>📜 Agent 执行日志</h3>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-wm-gray3"><span id="wf-log-count">0</span> 行</span>
+                        <button class="wm-btn wm-btn-ghost wm-btn-xs" id="btn-clear-log">清空</button>
+                    </div>
+                </div>
+                <div class="p-3 overflow-y-auto flex-1" id="wf-log-container">
+                    <div class="text-center text-wm-gray3 text-sm py-12">等待日志输出…</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右：报告预览 -->
+        <div class="col-span-4">
+            <div class="wm-card" style="height: 680px; display: flex; flex-direction: column;">
+                <div class="wm-card-header">
+                    <h3>📄 AI 生成报告预览</h3>
+                    <button class="wm-btn wm-btn-ghost wm-btn-xs" id="btn-export" disabled>导出 PDF</button>
+                </div>
+                <div class="p-4 overflow-y-auto flex-1 wf-report" id="wf-report-container">
+                    <div class="text-center text-wm-gray3 text-sm py-12">工作流完成后，实时 Markdown 报告将在此处渲染</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部人工中断点 -->
+    <div class="wm-card mt-5" id="wf-checkpoint-card" style="display:none;">
+        <div class="p-4 flex items-center justify-between" style="background: linear-gradient(90deg, rgba(232,163,61,0.08), transparent);">
+            <div class="flex items-center gap-3">
+                <span class="wm-light orange wm-pulse"></span>
+                <div>
+                    <div class="font-bold text-wm-secondary">⚠️ 人工决策中断点</div>
+                    <div class="text-xs text-wm-gray3 mt-0.5" id="wf-checkpoint-desc">—</div>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button class="wm-btn wm-btn-ghost wm-btn-sm" id="wf-reject">驳回重做</button>
+                <button class="wm-btn wm-btn-primary wm-btn-sm" id="wf-approve">批准继续 →</button>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+(function () {
+    'use strict';
+
+    // ===== 工作流模板定义 =====
+    const WORKFLOWS = {
+        'invest-dd': {
+            name: '投资尽调 · 合肥 XX 储能科技',
+            nodes: [
+                { id: 'n1', name: '数据采集 Agent', desc: '工商/税务/司法/征信多源采集', time: 2.5 },
+                { id: 'n2', name: '信用画像 Agent', desc: '六维度评估 + 雷达图生成', time: 2.0, checkpoint: false },
+                { id: 'n3', name: '产业研判 Agent', desc: '储能赛道趋势 + 政策追踪', time: 3.0 },
+                { id: 'n4', name: '财务分析 Agent', desc: 'DCF + 可比公司 + 可比交易三模型', time: 3.5 },
+                { id: 'n5', name: '风险扫描 Agent', desc: '合规/诉讼/担保圈/舆情', time: 2.5, checkpoint: true },
+                { id: 'n6', name: '尽调报告 Agent', desc: '投委会材料 Markdown 生成', time: 2.0 },
+            ]
+        },
+        'ma-dd': {
+            name: '并购尽调 · 江汽 × 新能源三电',
+            nodes: [
+                { id: 'n1', name: '标的筛选 Agent', desc: '全球资本市场扫描（A/港/美股）', time: 3.0 },
+                { id: 'n2', name: '画像构建 Agent', desc: '标的 360° 画像', time: 2.0 },
+                { id: 'n3', name: '交易结构 Agent', desc: '9 种资本运作模式推荐', time: 2.5 },
+                { id: 'n4', name: '估值定价 Agent', desc: '三法联动估值', time: 3.5, checkpoint: true },
+                { id: 'n5', name: '风险评估 Agent', desc: '六维风险 + 商誉减值测算', time: 3.0 },
+                { id: 'n6', name: '投后整合 Agent', desc: '整合方案 + 里程碑规划', time: 2.0 },
+            ]
+        },
+        'credit-360': {
+            name: '信用 360° 全景分析',
+            nodes: [
+                { id: 'n1', name: '数据汇聚 Agent', desc: '工商/财务/履约/舆情', time: 2.0 },
+                { id: 'n2', name: '指标计算 Agent', desc: '120+ 指标并行计算', time: 2.5 },
+                { id: 'n3', name: '评级建模 Agent', desc: 'AAA-CCC 等级评定', time: 2.0 },
+                { id: 'n4', name: 'AI 解读 Agent', desc: '是什么/为什么/怎么办', time: 3.0 },
+                { id: 'n5', name: '同业对标 Agent', desc: '省属/行业/规模对标', time: 2.0 },
+            ]
+        },
+        'risk-screen': {
+            name: '风险穿透扫描',
+            nodes: [
+                { id: 'n1', name: '主体穿透 Agent', desc: '集团→子→孙公司全级次', time: 2.5 },
+                { id: 'n2', name: '业务穿透 Agent', desc: '关联交易/担保圈/资金池', time: 3.0, checkpoint: true },
+                { id: 'n3', name: '数据穿透 Agent', desc: '跨业务系统全链路关联', time: 2.5 },
+                { id: 'n4', name: '异常识别 Agent', desc: '隐蔽交易 + 利益输送', time: 3.0 },
+                { id: 'n5', name: '风险报告 Agent', desc: '分级分类 + 处置建议', time: 2.0 },
+            ]
+        }
+    };
+
+    let state = {
+        currentWorkflow: null,
+        runningIdx: -1,
+        startTs: 0,
+        timerId: null,
+        halted: false,
+        checkpointResolve: null,
+        logs: [],
+    };
+
+    // ===== 渲染 DAG =====
+    function renderDAG() {
+        const wf = state.currentWorkflow;
+        const c = document.getElementById('wf-dag-container');
+        if (!wf) {
+            c.innerHTML = '<div class="text-center text-wm-gray3 text-sm py-12">请选择模板后启动工作流</div>';
+            return;
+        }
+        c.innerHTML = wf.nodes.map((n, i) => {
+            const state_ = i < state.runningIdx ? 'success'
+                         : i === state.runningIdx ? 'running'
+                         : 'pending';
+            return `
+            <div class="wf-dag-node ${state_}" data-idx="${i}">
+                <div class="wf-dag-ico">${state_ === 'success' ? '✓' : state_ === 'running' ? '⋯' : i + 1}</div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-sm font-bold text-wm-secondary truncate">${n.name}${n.checkpoint ? '<span class="wf-checkpoint-badge">人工确认</span>' : ''}</div>
+                    <div class="text-xs text-wm-gray3 mt-0.5 truncate">${n.desc}</div>
+                </div>
+                <div class="text-xs text-wm-gray3 font-mono">${n.time.toFixed(1)}s</div>
+            </div>`;
+        }).join('');
+        document.getElementById('wf-node-count').textContent = `${wf.nodes.length} 个节点`;
+    }
+
+    function updateProgress() {
+        const wf = state.currentWorkflow;
+        if (!wf) return;
+        const total = wf.nodes.length;
+        const done = Math.max(0, state.runningIdx);
+        document.getElementById('wf-progress-text').textContent = `${done}/${total}`;
+        const pct = total > 0 ? (done / total * 100) : 0;
+        document.getElementById('wf-progress-fill').style.width = pct + '%';
+        // ETA
+        if (state.runningIdx > 0 && state.runningIdx < total) {
+            const remainNodes = wf.nodes.slice(state.runningIdx);
+            const remainSec = remainNodes.reduce((a, n) => a + n.time, 0);
+            document.getElementById('wf-eta').textContent = formatTime(remainSec);
+        } else {
+            document.getElementById('wf-eta').textContent = state.runningIdx >= total ? '00:00' : '--:--';
+        }
+    }
+
+    function formatTime(sec) {
+        const m = Math.floor(sec / 60);
+        const s = Math.floor(sec % 60);
+        return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    // ===== 日志 =====
+    function log(type, msg) {
+        const now = new Date();
+        const t = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+        state.logs.push({ t, type, msg });
+        renderLogs();
+    }
+    function renderLogs() {
+        const c = document.getElementById('wf-log-container');
+        if (state.logs.length === 0) {
+            c.innerHTML = '<div class="text-center text-wm-gray3 text-sm py-12">等待日志输出…</div>';
+        } else {
+            c.innerHTML = state.logs.map(l =>
+                `<div class="wf-log-line ${l.type}"><span class="wf-log-time">${l.t}</span>${window.WM_C.escapeHtml(l.msg)}</div>`
+            ).join('');
+            c.scrollTop = c.scrollHeight;
+        }
+        document.getElementById('wf-log-count').textContent = state.logs.length;
+    }
+
+    // ===== 报告流式渲染 =====
+    const REPORT_TEMPLATES = {
+        'invest-dd': `<h4>一、标的基本情况</h4>
+<ul><li>企业名称：合肥 XX 储能科技有限公司</li><li>成立时间：2019-03-15</li><li>注册资本：5,000 万元</li><li>主营业务：储能系统集成 + BMS 研发</li></ul>
+<h4>二、信用画像</h4>
+<ul><li>综合信用评分：<strong>758/1000</strong></li><li>信用等级：<strong>A</strong></li><li>六维度得分：财务 82 / 履约 75 / 合规 80 / 经营 73 / 社会 76 / 国资特色 —</li></ul>
+<h4>三、产业研判</h4>
+<ul><li>赛道：安徽十一大产业之「新能源和节能环保」</li><li>市场空间：2025-2030 CAGR 28.5%</li><li>政策：省属扶持 + 科创债通道优先</li></ul>
+<h4>四、估值分析（三法融合）</h4>
+<ul><li>DCF 估值：<strong>3.8 亿元</strong></li><li>可比公司：3.2-4.5 亿元（中位 3.6 亿）</li><li>可比交易：3.5-4.2 亿元</li><li><strong>综合建议区间：3.5-4.0 亿元</strong></li></ul>
+<h4>五、风险识别</h4>
+<ul><li>🟢 合规风险：低（无重大处罚）</li><li>🟡 经营风险：中（单一大客户集中度 38%）</li><li>🟢 担保圈：清洁</li></ul>
+<h4>六、投委会建议</h4>
+<ul><li>建议投资金额：<strong>1.5 亿元（占股 38%）</strong></li><li>估值对赌：业绩对赌 2026-2028 三年净利润</li><li>投后运营：绑定 2 名董事 + 季度经营复盘</li></ul>`,
+        'ma-dd': `<h4>一、标的情况</h4>
+<ul><li>标的：合肥 XX 三电有限公司（拟收购）</li><li>标的资产：电控 + 电池 + 电机核心产线</li></ul>
+<h4>二、交易结构（推荐方案）</h4>
+<ul><li>方式：现金 + 股权置换</li><li>支付：50% 现金 + 50% 定向增发</li><li>配套融资：中债科创债 15 亿元</li></ul>
+<h4>三、估值</h4>
+<ul><li>DCF：18.5 亿 | 可比 17-20 亿 | 交易 16-21 亿</li><li><strong>建议对价：17.5 亿元</strong></li></ul>
+<h4>四、风险</h4>
+<ul><li>🟡 商誉减值：需关注技术迭代</li><li>🟢 反垄断：不构成控制</li><li>🟢 政治：属战略新兴产业</li></ul>
+<h4>五、投后整合</h4>
+<ul><li>6 个月过渡期 + 12 月整合里程碑</li><li>高管锁定 3 年 + 核心团队期权激励</li></ul>`,
+        'credit-360': `<h4>一、信用概览</h4>
+<ul><li>综合评分：<strong>873</strong> / 1000 · 等级 AA</li><li>近 12 月变化：+18 分（上行趋势）</li></ul>
+<h4>二、六维度详情</h4>
+<ul><li>财务健康 88 · 履约表现 86 · 合规记录 90 · 经营活力 84 · 社会信用 83 · 国资特色 92</li></ul>
+<h4>三、AI 解读</h4>
+<ul><li><strong>是什么：</strong>企业处于 AA 级稳健区间，国资特色指标（党建合规/三重一大）得分突出</li><li><strong>为什么：</strong>过去 12 月合规零事件 · 应收账款周转改善 · 新增科创债发行成功</li><li><strong>怎么办：</strong>建议提升社会信用维度，关注供应链履约声誉建设</li></ul>
+<h4>四、同业对标</h4>
+<ul><li>省属国企中位数 812，本企业超越 72%</li><li>同行业（能源）前 25%</li></ul>`,
+        'risk-screen': `<h4>一、主体穿透</h4>
+<ul><li>集团总部：皖能集团股份有限公司</li><li>二级子公司：8 家（电力 4 · 环保 2 · 贸易 2）</li><li>三级及以下：26 家</li></ul>
+<h4>二、业务穿透</h4>
+<ul><li>关联交易笔数：124 笔</li><li>担保圈：识别 2 个潜在互保群（低风险）</li><li>资金池：总规模 58 亿，流转频繁</li></ul>
+<h4>三、数据穿透</h4>
+<ul><li>数据源：ERP / OA / 财务 / 合同 / 舆情 五源关联</li><li>异常信号：1 项（某子公司应付账款账龄异常延长）</li></ul>
+<h4>四、处置建议</h4>
+<ul><li>🟡 关注：建议对延期应付账款发起专项审计</li><li>🟢 清洁：担保圈与资金池运行正常</li></ul>`
+    };
+    function streamReport(key) {
+        const c = document.getElementById('wf-report-container');
+        const full = REPORT_TEMPLATES[key] || '<p>（报告生成中…）</p>';
+        c.innerHTML = '';
+        return new Promise(resolve => {
+            const chunks = full.split(/(?=<)/);  // 按标签切片流式
+            let i = 0;
+            (function push() {
+                if (i >= chunks.length) {
+                    document.getElementById('btn-export').removeAttribute('disabled');
+                    resolve();
+                    return;
+                }
+                c.innerHTML += chunks[i++];
+                c.scrollTop = c.scrollHeight;
+                setTimeout(push, 36);
+            })();
+        });
+    }
+
+    // ===== 运行工作流 =====
+    async function runWorkflow() {
+        const key = document.getElementById('workflow-template').value;
+        const tpl = WORKFLOWS[key];
+        state.currentWorkflow = JSON.parse(JSON.stringify(tpl));
+        state.runningIdx = 0;
+        state.logs = [];
+        state.halted = false;
+        state.startTs = Date.now();
+        document.getElementById('wf-status-text').textContent = '运行中';
+        document.getElementById('wf-status-light').className = 'wm-light orange wm-pulse';
+        document.getElementById('btn-export').setAttribute('disabled', 'disabled');
+        document.getElementById('wf-report-container').innerHTML = '<div class="text-center text-wm-gray3 text-sm py-12">⏳ 工作流运行中…</div>';
+        renderDAG(); updateProgress();
+        log('info', `工作流启动：${tpl.name}`);
+
+        // 计时器
+        if (state.timerId) clearInterval(state.timerId);
+        state.timerId = setInterval(() => {
+            const sec = (Date.now() - state.startTs) / 1000;
+            document.getElementById('wf-elapsed').textContent = formatTime(sec);
+        }, 200);
+
+        for (let i = 0; i < tpl.nodes.length; i++) {
+            if (state.halted) break;
+            const node = tpl.nodes[i];
+            state.runningIdx = i;
+            renderDAG(); updateProgress();
+            log('info', `[${node.id}] ${node.name} 启动…`);
+
+            await sleep(node.time * 1000 * 0.3);  // 演示加速
+
+            // 中间日志
+            log('info', `  ├─ ${node.desc}`);
+            await sleep(node.time * 1000 * 0.3);
+
+            // 人工中断点
+            if (node.checkpoint) {
+                log('warn', `[${node.id}] 🛑 触发人工决策中断点，等待确认…`);
+                showCheckpoint(node);
+                await new Promise(resolve => { state.checkpointResolve = resolve; });
+                hideCheckpoint();
+                if (state.halted) { log('error', '用户驳回，工作流终止'); break; }
+                log('success', `[${node.id}] ✓ 用户批准，继续执行`);
+            }
+
+            await sleep(node.time * 1000 * 0.4);
+            log('success', `[${node.id}] ✓ ${node.name} 完成`);
+        }
+
+        clearInterval(state.timerId);
+
+        if (state.halted) {
+            state.runningIdx = -1;
+            document.getElementById('wf-status-text').textContent = '已终止';
+            document.getElementById('wf-status-light').className = 'wm-light red';
+            return;
+        }
+
+        state.runningIdx = tpl.nodes.length;
+        renderDAG(); updateProgress();
+        document.getElementById('wf-status-text').textContent = '全部完成';
+        document.getElementById('wf-status-light').className = 'wm-light green';
+        log('success', `✓ 工作流 ${tpl.name} 全部节点执行完成`);
+        log('info', '正在生成综合报告…');
+        await streamReport(key);
+        log('success', '✓ 综合报告已就绪');
+    }
+
+    function showCheckpoint(node) {
+        const card = document.getElementById('wf-checkpoint-card');
+        document.getElementById('wf-checkpoint-desc').textContent = `节点「${node.name}」需人工确认：${node.desc}`;
+        card.style.display = 'block';
+    }
+    function hideCheckpoint() {
+        document.getElementById('wf-checkpoint-card').style.display = 'none';
+    }
+
+    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    // ===== 事件 =====
+    document.getElementById('btn-start').addEventListener('click', () => {
+        if (state.runningIdx >= 0 && state.currentWorkflow && state.runningIdx < state.currentWorkflow.nodes.length) {
+            window.showToast('工作流运行中，请先终止', 'warn');
+            return;
+        }
+        runWorkflow();
+    });
+    document.getElementById('btn-reset').addEventListener('click', () => {
+        state.halted = true;
+        if (state.checkpointResolve) state.checkpointResolve();
+        clearInterval(state.timerId);
+        state.currentWorkflow = null;
+        state.runningIdx = -1;
+        state.logs = [];
+        renderDAG(); updateProgress(); renderLogs();
+        hideCheckpoint();
+        document.getElementById('wf-report-container').innerHTML = '<div class="text-center text-wm-gray3 text-sm py-12">工作流完成后，实时 Markdown 报告将在此处渲染</div>';
+        document.getElementById('wf-status-text').textContent = '待启动';
+        document.getElementById('wf-status-light').className = 'wm-light green wm-pulse';
+        document.getElementById('wf-elapsed').textContent = '00:00';
+        document.getElementById('wf-eta').textContent = '--:--';
+    });
+    document.getElementById('btn-clear-log').addEventListener('click', () => {
+        state.logs = []; renderLogs();
+    });
+    document.getElementById('wf-approve').addEventListener('click', () => {
+        if (state.checkpointResolve) state.checkpointResolve();
+    });
+    document.getElementById('wf-reject').addEventListener('click', () => {
+        state.halted = true;
+        if (state.checkpointResolve) state.checkpointResolve();
+    });
+    document.getElementById('btn-export').addEventListener('click', () => {
+        window.showToast('PDF 导出中 · 模拟环境仅演示', 'info');
+    });
+
+    // 默认渲染一次（空态）
+    renderDAG();
+})();
+</script>
+</body>
+</html>

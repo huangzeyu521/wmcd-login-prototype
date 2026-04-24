@@ -1,0 +1,39 @@
+MIT License
+
+Copyright (c) 2026 huangzeyu521
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+================================================================================
+
+NON-OFFICIAL DISCLAIMER / 非官方声明
+
+This project is a personal / academic demonstration prototype for UI-UX
+research purposes. It is NOT an official product of the Anhui Provincial
+State-Owned Assets Supervision and Administration Commission (SASAC) or any
+other government authority. All brand names, logos, unit names (including
+"安徽省国资委", "皖美信用") appearing in this repository are used for
+illustrative / design-concept purposes only and do not constitute any official
+affiliation, endorsement, or authorization.
+
+本项目为**个人/学术用途的 UI-UX 设计原型**，**并非**安徽省国有资产监督
+管理委员会或其他任何政府机关的官方产品。仓库中出现的"安徽省国资委"、
+"皖美信用"等品牌、徽标、单位名称，**仅用于设计概念演示**，不构成任何
+官方关联、背书或授权。禁止将本项目内容直接用于商业部署、伪装为官方系统
+或任何可能误导公众的场景。

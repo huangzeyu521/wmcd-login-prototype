@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>个人中心 - 皖美信用</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="../assets/css/shared.css?v=gap1">
+<link rel="stylesheet" href="../assets/css/mvp.css?v=gap1">
+<link rel="stylesheet" href="../assets/css/ai.css?v=gap1">
+<script src="../assets/js/shared.js?v=gap1"></script>
+<script src="../assets/js/interactions.js?v=gap1"></script>
+<script src="../assets/js/mock-data.js?v=gap1"></script>
+<script src="../assets/js/auth.js?v=gap1"></script>
+<script src="../assets/js/tickets.js?v=gap1"></script>
+<script src="../assets/js/phase2.js?v=gap1"></script>
+<script src="../assets/js/components.js?v=gap1"></script>
+<script src="../assets/js/ai-client.js?v=gap1"></script>
+<style>
+  .profile-hero {
+    background: linear-gradient(135deg, var(--color-secondary), #1F4A8A 60%, var(--color-primary));
+    color: #FFF;
+    border-radius: 10px;
+    padding: 28px 32px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .profile-hero::after {
+    content: "";
+    position: absolute; inset: 0;
+    background: radial-gradient(circle at 85% 30%, rgba(201,160,99,0.25), transparent 50%);
+    pointer-events: none;
+  }
+  .profile-avatar {
+    width: 84px; height: 84px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #C9A063, #E8C87A);
+    color: #8A0F14;
+    font-family: SimSun, serif;
+    font-weight: 900;
+    font-size: 36px;
+    display: flex; align-items: center; justify-content: center;
+    border: 3px solid rgba(255,255,255,0.3);
+    flex-shrink: 0;
+  }
+  .kv-row { display: flex; padding: 10px 0; border-bottom: 1px dashed var(--color-border); font-size: 13px; }
+  .kv-row:last-child { border-bottom: none; }
+  .kv-row .k { width: 140px; color: var(--color-text-3); flex-shrink: 0; }
+  .kv-row .v { flex: 1; color: var(--color-text); font-weight: 500; }
+  .log-entry {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px;
+    border-bottom: 1px dashed var(--color-border);
+    font-size: 12px;
+  }
+  .log-entry:last-child { border-bottom: none; }
+  .log-ico { width: 28px; height: 28px; border-radius: 50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; background: rgba(15,42,86,0.08); }
+</style>
+</head>
+<body class="bg-wm-bg">
+<script>if (!window.WM_AUTH.guard()) throw new Error('not logged in');</script>
+
+<div id="topbar-root"></div>
+<script>document.getElementById('topbar-root').outerHTML = WM_C.renderAuthTopbar('profile');</script>
+
+<main class="px-8 py-6 max-w-[1400px] mx-auto">
+    <h1 class="text-2xl font-bold text-wm-secondary mb-1">👤 个人中心</h1>
+    <div class="text-xs text-wm-gray3 mb-5">账户信息 · 角色切换 · 安全 · 操作日志</div>
+
+    <div id="hero-root"></div>
+
+    <div class="grid grid-cols-12 gap-5">
+        <!-- 左：账户信息 + 权限 -->
+        <div class="col-span-5">
+            <div class="wm-card">
+                <div class="wm-card-header"><h3>📋 账户信息</h3></div>
+                <div class="p-5" id="account-info"></div>
+            </div>
+
+            <div class="wm-card mt-4">
+                <div class="wm-card-header"><h3>🔐 我的权限</h3></div>
+                <div class="p-5" id="permission-list"></div>
+            </div>
+        </div>
+
+        <!-- 右：安全 + 操作日志 -->
+        <div class="col-span-7">
+            <div class="wm-card">
+                <div class="wm-card-header"><h3>🛡 安全设置</h3></div>
+                <div class="p-5 space-y-4">
+                    <div class="flex items-center justify-between p-3 rounded" style="background:#FAFAF7;border:1px solid var(--color-border);">
+                        <div>
+                            <div class="font-bold text-wm-secondary">修改登录密码</div>
+                            <div class="text-xs text-wm-gray3 mt-0.5">建议每 90 天更换一次 · 满足等保三级复杂度要求</div>
+                        </div>
+                        <button class="wm-btn wm-btn-ghost wm-btn-sm" onclick="window.showToast('密码修改入口已开启 · Demo 模式','info')">修改</button>
+                    </div>
+                    <div class="flex items-center justify-between p-3 rounded" style="background:#FAFAF7;border:1px solid var(--color-border);">
+                        <div>
+                            <div class="font-bold text-wm-secondary">CA 证书绑定</div>
+                            <div class="text-xs text-wm-gray3 mt-0.5" id="ca-status">未绑定 · 建议绑定政务 CA 以满足等保三级</div>
+                        </div>
+                        <button class="wm-btn wm-btn-primary wm-btn-sm" id="btn-bind-ca">绑定 CA</button>
+                    </div>
+                    <div class="flex items-center justify-between p-3 rounded" style="background:#FAFAF7;border:1px solid var(--color-border);">
+                        <div>
+                            <div class="font-bold text-wm-secondary">国密 U-Key 绑定</div>
+                            <div class="text-xs text-wm-gray3 mt-0.5">SM2/SM3/SM4 · 满足关键信息基础设施要求</div>
+                        </div>
+                        <button class="wm-btn wm-btn-ghost wm-btn-sm" onclick="window.showToast('U-Key 绑定入口 · Demo 模式','info')">绑定</button>
+                    </div>
+                    <div class="flex items-center justify-between p-3 rounded" style="background:#FAFAF7;border:1px solid var(--color-border);">
+                        <div>
+                            <div class="font-bold text-wm-secondary">双因素认证（2FA）</div>
+                            <div class="text-xs text-wm-gray3 mt-0.5">提升账户安全等级</div>
+                        </div>
+                        <label class="wm-switch"><input type="checkbox" id="tfa-toggle"><span class="wm-switch-slider"></span></label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="wm-card mt-4">
+                <div class="wm-card-header">
+                    <h3>📜 操作日志（最近 20 条）</h3>
+                    <button class="wm-btn wm-btn-ghost wm-btn-xs" onclick="window.showToast('完整日志导出中','info')">导出全量</button>
+                </div>
+                <div class="p-2" id="op-logs"></div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+(function () {
+    'use strict';
+    const user = window.WM_AUTH.currentUser() || {};
+
+    // Hero
+    document.getElementById('hero-root').innerHTML = `
+        <div class="profile-hero flex items-center gap-5">
+            <div class="profile-avatar" style="${user.avatarBg ? 'background:' + user.avatarBg + ';color:#fff;' : ''}">${user.avatar || user.shortName?.[0] || '?'}</div>
+            <div class="flex-1 relative z-10">
+                <div class="text-2xl font-bold mb-1">${user.shortName || '—'}</div>
+                <div class="text-sm opacity-85">${user.roleLabel || ''} · ${user.org || ''}</div>
+                <div class="flex items-center gap-2 mt-2">
+                    <span class="text-xs opacity-70">账号：${user.id}</span>
+                    <span class="wm-badge wm-badge-aaa" style="border-radius:2px;">V2.0 MVP</span>
+                    <span class="text-xs opacity-70">登录时间：${new Date().toLocaleString('zh-CN')}</span>
+                </div>
+            </div>
+            <div class="relative z-10 flex items-center gap-2">
+                <button class="wm-btn wm-btn-ghost wm-btn-sm" style="background:rgba(255,255,255,0.12);color:#FFF;border-color:rgba(255,255,255,0.3);" id="btn-switch-role">🔁 切换角色</button>
+                <button class="wm-btn wm-btn-ghost wm-btn-sm" style="background:rgba(255,255,255,0.12);color:#FFF;border-color:rgba(255,255,255,0.3);" onclick="window.WM_AUTH.logout()">退出登录</button>
+            </div>
+        </div>
+    `;
+
+    // 账户信息
+    document.getElementById('account-info').innerHTML = `
+        <div class="kv-row"><div class="k">姓名</div><div class="v">${user.shortName || '—'}</div></div>
+        <div class="kv-row"><div class="k">工号</div><div class="v font-mono">${user.id || '—'}</div></div>
+        <div class="kv-row"><div class="k">角色</div><div class="v">${user.roleLabel || '—'}</div></div>
+        <div class="kv-row"><div class="k">所属单位</div><div class="v">${user.org || '—'}</div></div>
+        <div class="kv-row"><div class="k">部门</div><div class="v">${user.dept || '综合办公室'}</div></div>
+        <div class="kv-row"><div class="k">手机</div><div class="v font-mono">${user.phone || '138****' + (user.id || '').slice(-4)}</div></div>
+        <div class="kv-row"><div class="k">邮箱</div><div class="v">${user.email || ((user.id || '') + '@anhui-sasac.gov.cn')}</div></div>
+        <div class="kv-row"><div class="k">描述</div><div class="v text-xs text-wm-gray3">${user.description || ''}</div></div>
+    `;
+
+    // 权限
+    const perms = user.permissions || [];
+    const permLabels = {
+        '*': '超级管理员（所有权限）',
+        'approve': '审批权限',
+        'create_ticket': '发起单据',
+        'view_dashboard': '查看驾驶舱',
+        'supervise': '督办',
+        'read_credit': '查阅信用数据',
+        'read_financing': '查阅融资数据',
+        'read_risk': '查阅风控数据',
+    };
+    const p = document.getElementById('permission-list');
+    if (perms.length === 0) {
+        p.innerHTML = '<div class="text-sm text-wm-gray3">暂无额外权限</div>';
+    } else {
+        p.innerHTML = perms.map(k => `
+            <div class="inline-flex items-center gap-2 px-3 py-1.5 mr-2 mb-2 rounded" style="background:rgba(201,160,99,0.12);border:1px solid var(--color-accent);font-size:12px;">
+                <span>✓</span><span>${permLabels[k] || k}</span>
+            </div>
+        `).join('');
+    }
+
+    // CA 状态
+    const caBound = localStorage.getItem('wm_ca_bound') === '1';
+    if (caBound) {
+        document.getElementById('ca-status').textContent = '✓ 已绑定 · 证书指纹: SHA-256:XX:XX:...';
+        document.getElementById('ca-status').style.color = 'var(--color-success)';
+        const btn = document.getElementById('btn-bind-ca');
+        btn.textContent = '解绑';
+        btn.classList.remove('wm-btn-primary');
+        btn.classList.add('wm-btn-ghost');
+    }
+    document.getElementById('btn-bind-ca').addEventListener('click', () => {
+        const now = localStorage.getItem('wm_ca_bound') === '1';
+        localStorage.setItem('wm_ca_bound', now ? '0' : '1');
+        window.showToast(now ? 'CA 证书已解绑' : 'CA 证书已绑定（Demo）', 'success');
+        setTimeout(() => location.reload(), 600);
+    });
+
+    // 2FA
+    const tfa = document.getElementById('tfa-toggle');
+    tfa.checked = localStorage.getItem('wm_tfa_enabled') === '1';
+    tfa.addEventListener('change', (e) => {
+        localStorage.setItem('wm_tfa_enabled', e.target.checked ? '1' : '0');
+        window.showToast(e.target.checked ? '已开启双因素认证' : '已关闭双因素认证', 'info');
+    });
+
+    // 角色切换快捷按钮
+    document.getElementById('btn-switch-role').addEventListener('click', () => {
+        const trigger = document.getElementById('wm-user-chip-trigger');
+        if (trigger) trigger.click();
+        else window.showToast('请点击右上角头像切换角色', 'info');
+    });
+
+    // 操作日志（mock）
+    const now = Date.now();
+    const logs = [
+        { ts: now, ico: '🔑', msg: '登录成功', ip: '192.168.100.128' },
+        { ts: now - 2 * 60 * 1000, ico: '🔎', msg: '查询企业信用：安徽皖能集团', ip: '192.168.100.128' },
+        { ts: now - 8 * 60 * 1000, ico: '📤', msg: '提交单据：融资方案推荐申请 #WM-FIN-2026-04-XX', ip: '192.168.100.128' },
+        { ts: now - 22 * 60 * 1000, ico: '👀', msg: '查看驾驶舱风险地图', ip: '192.168.100.128' },
+        { ts: now - 2 * 3600 * 1000, ico: '✓', msg: '审批通过：某供应商准入申请', ip: '192.168.100.128' },
+        { ts: now - 3 * 3600 * 1000, ico: '🔑', msg: '登录成功', ip: '192.168.100.128' },
+        { ts: now - 24 * 3600 * 1000, ico: '📊', msg: '生成信用报告：某地方国企', ip: '192.168.100.128' },
+        { ts: now - 26 * 3600 * 1000, ico: '✏️', msg: '修改个人资料', ip: '192.168.100.128' },
+    ];
+    document.getElementById('op-logs').innerHTML = logs.map(l => `
+        <div class="log-entry">
+            <div class="log-ico">${l.ico}</div>
+            <div class="flex-1">
+                <div class="text-wm-secondary">${window.WM_C.escapeHtml(l.msg)}</div>
+                <div class="text-xs text-wm-gray3 mt-0.5">IP: ${l.ip}</div>
+            </div>
+            <div class="text-xs text-wm-gray3 font-mono">${new Date(l.ts).toLocaleString('zh-CN')}</div>
+        </div>
+    `).join('');
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>投资决策智能体 - 皖美信用</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<link rel="stylesheet" href="../assets/css/shared.css?v=p3.1">
+<script src="../assets/js/shared.js?v=p3.1"></script>
+<script src="../assets/js/interactions.js?v=p3.1"></script>
+<link rel="stylesheet" href="../assets/css/mvp.css?v=p3.1">
+<link rel="stylesheet" href="../assets/css/ai.css?v=p3.1">
+<script src="../assets/js/mock-data.js?v=p3.1"></script>
+<script src="../assets/js/auth.js?v=p3.1"></script>
+<script src="../assets/js/tickets.js?v=p3.1"></script>
+<script src="../assets/js/phase2.js?v=p3.1"></script>
+<script src="../assets/js/components.js?v=p3.1"></script>
+<script src="../assets/js/ai-client.js?v=p3.1"></script>
+
+<style>
+    .breadcrumb { color: var(--color-text-3); font-size: 12px; }
+    .breadcrumb a { color: var(--color-secondary); text-decoration: none; }
+    .breadcrumb a:hover { color: var(--color-primary); }
+    .breadcrumb .sep { margin: 0 6px; color: var(--color-border-2); }
+    .agent-node {
+        padding: 12px 14px;
+        background: white;
+        border: 1.5px solid var(--color-border);
+        border-radius: 6px;
+        transition: all 0.25s;
+        position: relative;
+    }
+    .agent-node.done {
+        border-color: #2B9348;
+        background: linear-gradient(180deg, rgba(43,147,72,0.06), #FFFFFF);
+    }
+    .agent-node.done::before {
+        content: "✓";
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #2B9348;
+        color: white;
+        font-size: 11px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .agent-node.active {
+        border-color: var(--color-primary);
+        background: linear-gradient(180deg, rgba(184,20,26,0.04), #FFFFFF);
+        box-shadow: 0 0 0 4px rgba(184,20,26,0.12);
+    }
+    .agent-node.active::before {
+        content: "";
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--color-primary);
+        animation: pulse-ring 1.5s infinite;
+    }
+    .arrow-right {
+        display: flex;
+        align-items: center;
+        color: var(--color-accent);
+    }
+    .metric-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 3px 10px;
+        background: var(--color-bg-alt);
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+    .ic-item {
+        display: flex;
+        gap: 12px;
+        padding: 10px;
+        border-left: 2px solid var(--color-border);
+        margin-left: 10px;
+        padding-left: 16px;
+        position: relative;
+    }
+    .ic-item::before {
+        content: "";
+        position: absolute;
+        left: -7px;
+        top: 14px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: white;
+        border: 2px solid var(--color-primary);
+    }
+</style>
+</head>
+<body class="bg-wm-bg">
+<script>if (!window.WM_AUTH || !window.WM_AUTH.guard()) throw new Error("not logged in");</script>
+
+<div id="topbar-root"></div>
+<script>document.getElementById('topbar-root').outerHTML = WM_C.renderAuthTopbar('investment');</script>
+
+<div class="bg-white border-b border-wm px-8 py-3">
+    <nav class="breadcrumb">
+        <a href="index.html">🏠 首页</a><span class="sep">/</span>
+        <a href="index.html">七大智能体</a><span class="sep">/</span>
+        <span style="color:var(--color-primary);font-weight:600;">📈 投资决策智能体</span>
+    </nav>
+</div>
+
+<div class="flex">
+    <aside class="wm-sidebar" style="width:220px;min-height:calc(100vh - 120px);">
+        <div class="p-4 border-b border-wm">
+            <div class="text-xs text-wm-gray3 tracking-widest">AGENT · MODULE</div>
+            <div class="text-base font-bold text-wm-primary mt-1">投资决策智能体</div>
+            <div class="text-xs text-wm-gray mt-1">Investment Decision</div>
+        </div>
+        <div class="py-2">
+            <div class="sb-item active"><span>📊</span> 投资组合仪表盘</div>
+            <div class="sb-item"><span>🔬</span> 产业深度研究</div>
+            <div class="sb-item"><span>🎯</span> 标的评估工作台</div>
+            <div class="sb-item"><span>🤝</span> Multi-Agent尽调</div>
+            <div class="sb-item"><span>💼</span> 投委会决策包</div>
+            <div class="sb-item"><span>🛰</span> 投后跟踪看板</div>
+            <div class="sb-item"><span>🚪</span> 退出路径规划</div>
+            <div class="sb-item"><span>💸</span> 基金运营管理</div>
+            <div class="sb-item"><span>📦</span> 决策案例库</div>
+        </div>
+    </aside>
+
+    <main class="flex-1 p-6" style="min-width:0;">
+        <div class="flex items-center justify-between mb-5">
+            <div>
+                <div class="flex items-center gap-3 mb-1">
+                    <h1 class="text-2xl font-bold text-wm-secondary">投资全生命周期决策工作台</h1>
+                    <span class="wm-badge wm-badge-blue">国有资本布局优化</span>
+                </div>
+                <div class="text-xs text-wm-gray3">Investment Decision Agent · 七维度评估 × Multi-Agent协同 × 投前-投中-投后-退出全周期</div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button class="wm-btn wm-btn-ghost wm-btn-sm">📂 案例库</button>
+                <button class="wm-btn wm-btn-ghost wm-btn-sm">📊 组合分析</button>
+                <button class="wm-btn wm-btn-gold wm-btn-sm">🧠 AI产研</button>
+                <a href="ticket-new.html?type=investment" class="wm-btn wm-btn-primary wm-btn-sm" style="text-decoration:none;">＋ 新建尽调</a>
+            </div>
+        </div>
+
+        <!-- 投资组合仪表盘（4个核心卡片） -->
+        <div class="grid grid-cols-4 gap-4 mb-4">
+            <div class="wm-card p-4" style="background:linear-gradient(135deg,#FFFFFF,rgba(184,20,26,0.04));">
+                <div class="text-xs text-wm-gray3">在投项目数</div>
+                <div class="flex items-baseline gap-2 mt-1">
+                    <span class="text-4xl font-bold font-mono text-wm-primary">326</span>
+                    <span class="text-xs text-wm-gray">个</span>
+                </div>
+                <div class="text-xs text-emerald-600 mt-1">↑ 15 较上季度</div>
+            </div>
+            <div class="wm-card p-4" style="background:linear-gradient(135deg,#FFFFFF,rgba(15,42,86,0.04));">
+                <div class="text-xs text-wm-gray3">累计投资金额</div>
+                <div class="flex items-baseline gap-2 mt-1">
+                    <span class="text-4xl font-bold font-mono text-wm-secondary">1,286</span>
+                    <span class="text-xs text-wm-gray">亿元</span>
+                </div>
+                <div class="text-xs text-emerald-600 mt-1">↑ 18.2% YoY</div>
+            </div>
+            <div class="wm-card p-4" style="background:linear-gradient(135deg,#FFFFFF,rgba(201,160,99,0.06));">
+                <div class="text-xs text-wm-gray3">综合IRR</div>
+                <div class="flex items-baseline gap-2 mt-1">
+                    <span class="text-4xl font-bold font-mono" style="color:#A8823E;">14.8</span>
+                    <span class="text-xs text-wm-gray">%</span>
+                </div>
+                <div class="text-xs text-emerald-600 mt-1">↑ 2.3pct</div>
+            </div>
+            <div class="wm-card p-4" style="background:linear-gradient(135deg,#FFFFFF,rgba(43,147,72,0.04));">
+                <div class="text-xs text-wm-gray3">成功退出</div>
+                <div class="flex items-baseline gap-2 mt-1">
+                    <span class="text-4xl font-bold font-mono text-emerald-600">58</span>
+                    <span class="text-xs text-wm-gray">个</span>
+                </div>
+                <div class="text-xs text-emerald-600 mt-1">平均倍数 2.8x</div>
+            </div>
+        </div>
+
+        <!-- Multi-Agent尽调工作流（重点）-->
+        <div class="wm-card mb-4">
+            <div class="wm-card-header">
+                <h3>Multi-Agent 智能尽调工作流 · 并购合肥XX储能科技有限公司</h3>
+                <div class="flex gap-2">
+                    <span class="wm-badge wm-badge-green">已完成 5/8 Agent</span>
+                    <span class="wm-badge wm-badge-orange">预计剩余 42min</span>
+                </div>
+            </div>
+            <div class="p-5">
+                <div class="grid grid-cols-8 gap-3 items-stretch">
+                    <div class="agent-node done">
+                        <div class="text-xs text-wm-gray3 mb-1">① 产业研究Agent</div>
+                        <div class="text-sm font-bold text-wm-secondary">行业全景</div>
+                        <div class="text-xs text-wm-gray mt-1">储能赛道</div>
+                        <div class="text-xs text-emerald-600 mt-2">耗时 3m12s</div>
+                    </div>
+                    <div class="agent-node done">
+                        <div class="text-xs text-wm-gray3 mb-1">② 标的画像Agent</div>
+                        <div class="text-sm font-bold text-wm-secondary">企业画像</div>
+                        <div class="text-xs text-wm-gray mt-1">穿透至子公司</div>
+                        <div class="text-xs text-emerald-600 mt-2">耗时 4m38s</div>
+                    </div>
+                    <div class="agent-node done">
+                        <div class="text-xs text-wm-gray3 mb-1">③ 信用Agent</div>
+                        <div class="text-sm font-bold text-wm-secondary">信用尽调</div>
+                        <div class="text-xs text-wm-gray mt-1">调用信用优化智能体</div>
+                        <div class="text-xs text-emerald-600 mt-2">耗时 2m08s</div>
+                    </div>
+                    <div class="agent-node done">
+                        <div class="text-xs text-wm-gray3 mb-1">④ 估值Agent</div>
+                        <div class="text-sm font-bold text-wm-secondary">三模型融合</div>
+                        <div class="text-xs text-wm-gray mt-1">DCF+PE+可比交易</div>
+                        <div class="text-xs text-emerald-600 mt-2">耗时 5m45s</div>
+                    </div>
+                    <div class="agent-node done">
+                        <div class="text-xs text-wm-gray3 mb-1">⑤ 尽调Agent</div>
+                        <div class="text-sm font-bold text-wm-secondary">清单生成</div>
+                        <div class="text-xs text-wm-gray mt-1">财务/法律/业务</div>
+                        <div class="text-xs text-emerald-600 mt-2">耗时 3m22s</div>
+                    </div>
+                    <div class="agent-node active">
+                        <div class="text-xs text-wm-gray3 mb-1">⑥ 风险Agent</div>
+                        <div class="text-sm font-bold text-wm-primary">风险扫描</div>
+                        <div class="text-xs text-wm-gray mt-1">6维度扫描中…</div>
+                        <div class="text-xs text-wm-primary mt-2">已用 1m30s</div>
+                    </div>
+                    <div class="agent-node" style="opacity:0.55;">
+                        <div class="text-xs text-wm-gray3 mb-1">⑦ 投委会Agent</div>
+                        <div class="text-sm font-bold text-wm-gray">决策包</div>
+                        <div class="text-xs text-wm-gray3 mt-1">待启动</div>
+                    </div>
+                    <div class="agent-node" style="opacity:0.55;">
+                        <div class="text-xs text-wm-gray3 mb-1">⑧ 监督Agent</div>
+                        <div class="text-sm font-bold text-wm-gray">合规审查</div>
+                        <div class="text-xs text-wm-gray3 mt-1">待启动</div>
+                    </div>
+                </div>
+                <div class="mt-4 pt-3 border-t border-wm flex items-center justify-between text-xs">
+                    <div class="flex items-center gap-4">
+                        <span class="flex items-center gap-1.5 text-wm-gray"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>已完成</span>
+                        <span class="flex items-center gap-1.5 text-wm-gray"><span class="w-2 h-2 rounded-full bg-red-500 wm-pulse"></span>执行中</span>
+                        <span class="flex items-center gap-1.5 text-wm-gray"><span class="w-2 h-2 rounded-full bg-gray-300"></span>待执行</span>
+                        <span class="text-wm-gray3">|</span>
+                        <span class="text-wm-gray">总耗时：<span class="font-mono font-bold text-wm-secondary">20m35s</span></span>
+                        <span class="text-wm-gray">Token消耗：<span class="font-mono font-bold text-wm-secondary">28.6K</span></span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="wm-btn wm-btn-ghost wm-btn-sm">⏸ 暂停</button>
+                        <button class="wm-btn wm-btn-primary wm-btn-sm">查看实时日志</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 七大评估维度 + 估值模型 -->
+        <div class="grid grid-cols-12 gap-4 mb-4">
+            <!-- 七维评估 -->
+            <div class="wm-card col-span-5">
+                <div class="wm-card-header">
+                    <h3>七维度评估 · 合肥XX储能科技</h3>
+                    <span class="font-mono font-bold text-wm-primary text-lg">8.4<span class="text-xs text-wm-gray3">/10</span></span>
+                </div>
+                <div class="p-4">
+                    <div id="chart-seven" style="height:320px;"></div>
+                </div>
+            </div>
+
+            <!-- 估值模型对比 -->
+            <div class="wm-card col-span-4">
+                <div class="wm-card-header">
+                    <h3>估值模型对比（三法融合）</h3>
+                </div>
+                <div class="p-4">
+                    <div id="chart-valuation" style="height:320px;"></div>
+                </div>
+            </div>
+
+            <!-- 核心结论 -->
+            <div class="wm-card col-span-3">
+                <div class="wm-card-header"><h3>AI综合结论</h3></div>
+                <div class="p-4">
+                    <div class="text-center mb-3 p-3 rounded" style="background:linear-gradient(135deg,rgba(201,160,99,0.1),rgba(184,20,26,0.05));">
+                        <div class="text-xs text-wm-gray3 mb-1">投资建议</div>
+                        <div class="text-2xl font-bold" style="color:#A8823E;">推荐投资</div>
+                        <div class="text-xs text-wm-gray mt-1">B+ 评级</div>
+                    </div>
+                    <div class="space-y-2 text-xs">
+                        <div class="flex justify-between py-1 border-b border-wm">
+                            <span class="text-wm-gray3">建议投资额</span>
+                            <span class="font-mono font-bold text-wm-primary">3-5 亿</span>
+                        </div>
+                        <div class="flex justify-between py-1 border-b border-wm">
+                            <span class="text-wm-gray3">目标股权比例</span>
+                            <span class="font-mono font-bold text-wm-primary">15-25%</span>
+                        </div>
+                        <div class="flex justify-between py-1 border-b border-wm">
+                            <span class="text-wm-gray3">估值区间</span>
+                            <span class="font-mono font-bold text-wm-primary">18-24 亿</span>
+                        </div>
+                        <div class="flex justify-between py-1 border-b border-wm">
+                            <span class="text-wm-gray3">预期IRR</span>
+                            <span class="font-mono font-bold text-emerald-600">22-28%</span>
+                        </div>
+                        <div class="flex justify-between py-1 border-b border-wm">
+                            <span class="text-wm-gray3">建议退出期</span>
+                            <span class="font-mono font-bold text-wm-primary">3-5年</span>
+                        </div>
+                        <div class="flex justify-between py-1">
+                            <span class="text-wm-gray3">首选退出</span>
+                            <span class="font-mono font-bold text-wm-primary">IPO</span>
+                        </div>
+                    </div>
+                    <button class="wm-btn wm-btn-primary w-full mt-3">生成投委会决策包</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 投资组合分析 + 产业研究热度 -->
+        <div class="grid grid-cols-12 gap-4 mb-4">
+            <!-- 组合分布 -->
+            <div class="wm-card col-span-4">
+                <div class="wm-card-header">
+                    <h3>投资组合 · 行业分布</h3>
+                </div>
+                <div class="p-4">
+                    <div id="chart-portfolio" style="height:280px;"></div>
+                </div>
+            </div>
+
+            <!-- 产业赛道热度 -->
+            <div class="wm-card col-span-4">
+                <div class="wm-card-header">
+                    <h3>十一大产业 · AI赛道研判</h3>
+                </div>
+                <div class="p-4">
+                    <div id="chart-heat" style="height:280px;"></div>
+                </div>
+            </div>
+
+            <!-- 尽调清单 -->
+            <div class="wm-card col-span-4">
+                <div class="wm-card-header">
+                    <h3>AI 尽调清单（60 项）</h3>
+                    <span class="wm-badge wm-badge-green">已完成 52/60</span>
+                </div>
+                <div class="p-5" style="max-height:280px;overflow-y:auto;">
+                    <div class="ic-item"><div>
+                        <div class="text-xs text-wm-gray3">财务尽调</div>
+                        <div class="text-sm font-semibold text-wm-secondary">近3年财务报表真实性核验</div>
+                        <div class="text-xs text-emerald-600 mt-1">✓ 已完成 · 无重大异常</div>
+                    </div></div>
+                    <div class="ic-item"><div>
+                        <div class="text-xs text-wm-gray3">财务尽调</div>
+                        <div class="text-sm font-semibold text-wm-secondary">关联方交易穿透</div>
+                        <div class="text-xs text-emerald-600 mt-1">✓ 已完成 · 关联方2家</div>
+                    </div></div>
+                    <div class="ic-item"><div>
+                        <div class="text-xs text-wm-gray3">法律尽调</div>
+                        <div class="text-sm font-semibold text-wm-secondary">股权结构与控制权</div>
+                        <div class="text-xs text-emerald-600 mt-1">✓ 已完成 · 股权清晰</div>
+                    </div></div>
+                    <div class="ic-item"><div>
+                        <div class="text-xs text-wm-gray3">法律尽调</div>
+                        <div class="text-sm font-semibold text-wm-secondary">核心专利有效性</div>
+                        <div class="text-xs text-amber-600 mt-1">⏳ 进行中 · 14/18项</div>
+                    </div></div>
+                    <div class="ic-item"><div>
+                        <div class="text-xs text-wm-gray3">业务尽调</div>
+                        <div class="text-sm font-semibold text-wm-secondary">核心客户访谈</div>
+                        <div class="text-xs text-amber-600 mt-1">⏳ 进行中 · 8/12家</div>
+                    </div></div>
+                    <div class="ic-item"><div>
+                        <div class="text-xs text-wm-gray3">技术尽调</div>
+                        <div class="text-sm font-semibold text-wm-secondary">技术路线与产品竞争力</div>
+                        <div class="text-xs text-emerald-600 mt-1">✓ 已完成</div>
+                    </div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 投后跟踪+退出路径 -->
+        <div class="grid grid-cols-12 gap-4">
+            <div class="wm-card col-span-7">
+                <div class="wm-card-header">
+                    <h3>已投项目 · 投后经营跟踪</h3>
+                    <span class="text-xs text-wm-gray3">监测项目 58 个 · 异常预警 3 项</span>
+                </div>
+                <div class="p-4">
+                    <table class="wm-table">
+                        <thead>
+                            <tr>
+                                <th>项目名称</th><th>行业</th><th>投资额</th><th>股权%</th>
+                                <th>营收YoY</th><th>业绩承诺</th><th>信用</th><th>状态</th>
+                            </tr>
+                        </thead>
+                        <tbody id="portfolio-rows"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="wm-card col-span-5">
+                <div class="wm-card-header">
+                    <h3>退出路径智能规划</h3>
+                </div>
+                <div class="p-4">
+                    <div id="chart-exit" style="height:280px;"></div>
+                    <div class="mt-3 pt-3 border-t border-wm grid grid-cols-4 gap-2 text-center">
+                        <div><div class="text-xs text-wm-gray3">IPO</div><div class="text-lg font-bold text-wm-primary">28%</div></div>
+                        <div><div class="text-xs text-wm-gray3">并购</div><div class="text-lg font-bold text-wm-secondary">35%</div></div>
+                        <div><div class="text-xs text-wm-gray3">股转</div><div class="text-lg font-bold" style="color:#C9A063;">22%</div></div>
+                        <div><div class="text-xs text-wm-gray3">回购</div><div class="text-lg font-bold text-emerald-600">15%</div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<div id="footer-root"></div>
+<script>document.getElementById('footer-root').outerHTML = renderFooter();</script>
+
+<script>
+// 七维雷达
+(function(){
+    const chart = echarts.init(document.getElementById('chart-seven'));
+    chart.setOption({
+        tooltip: {},
+        radar: {
+            indicator: [
+                { name:'行业前景', max:10 },
+                { name:'商业模式', max:10 },
+                { name:'财务状况', max:10 },
+                { name:'核心团队', max:10 },
+                { name:'技术壁垒', max:10 },
+                { name:'信用资质', max:10 },
+                { name:'盈利预期', max:10 }
+            ],
+            radius: '66%',
+            splitArea: { areaStyle: { color: ['rgba(201,160,99,0.03)', 'rgba(15,42,86,0.02)'] } },
+            axisName: { color: '#4A4A4A', fontSize: 11, fontWeight: 600 },
+            splitLine: { lineStyle: { color: '#D4CEB8' } }
+        },
+        series: [{
+            type: 'radar',
+            data: [
+                { value: [9.2, 8.5, 7.8, 8.9, 9.0, 8.6, 8.2], name: '标的企业',
+                  areaStyle: { color: 'rgba(184, 20, 26, 0.2)' },
+                  lineStyle: { color: '#B8141A', width: 2 },
+                  itemStyle: { color: '#B8141A' } },
+                { value: [8.0, 7.5, 7.2, 7.8, 7.5, 7.6, 7.0], name: '同业均值',
+                  areaStyle: { color: 'rgba(201, 160, 99, 0.12)' },
+                  lineStyle: { color: '#C9A063', type: 'dashed' },
+                  itemStyle: { color: '#C9A063' } }
+            ]
+        }]
+    });
+    window.addEventListener('resize', () => chart.resize());
+})();
+
+// 估值模型对比
+(function(){
+    const chart = echarts.init(document.getElementById('chart-valuation'));
+    chart.setOption({
+        tooltip: { trigger:'axis' },
+        legend: { top: 0, textStyle:{fontSize:11} },
+        grid: { top: 32, right: 15, bottom: 20, left: 60 },
+        xAxis: { type: 'value', name:'亿元', splitLine:{ lineStyle:{ color:'#E5E1D6', type:'dashed' }}, axisLabel:{ fontSize:10 } },
+        yAxis: { type: 'category', data: ['DCF模型','相对估值(PE)','相对估值(EV/EBITDA)','可比交易'], axisLabel: { fontSize: 11 } },
+        series: [
+            { name:'下限', type:'bar', stack:'estimate', data:[16, 18, 17, 19], itemStyle:{ color:'#0F2A56' }, barWidth: 14 },
+            { name:'区间', type:'bar', stack:'estimate', data:[6, 4, 5, 4], itemStyle:{ color:'#C9A063' }, barWidth: 14 },
+            { name:'目标(21亿)', type:'line', data:[null,null,null,null], symbol:'none',
+              markLine:{ silent:true, symbol:'none',
+                data:[{xAxis:21, label:{formatter:'目标\n21亿', fontSize:10, color:'#B8141A', fontWeight:700}, lineStyle:{color:'#B8141A', width:2, type:'dashed'}}] }
+            }
+        ]
+    });
+    window.addEventListener('resize', () => chart.resize());
+})();
+
+// 投资组合
+(function(){
+    const chart = echarts.init(document.getElementById('chart-portfolio'));
+    chart.setOption({
+        tooltip: { trigger: 'item', formatter: '{b}<br/>{c} 个项目 ({d}%)' },
+        color: ['#B8141A', '#0F2A56', '#C9A063', '#2B9348', '#1F4A8A', '#E8A33D', '#D64045'],
+        series: [{
+            type: 'pie', radius: ['40%','70%'], center: ['50%','55%'],
+            label: { formatter: '{b}\n{d}%', fontSize: 11 },
+            data: [
+                { value: 72, name: '新能源汽车' },
+                { value: 68, name: '新一代IT' },
+                { value: 48, name: '高端装备' },
+                { value: 42, name: '生命健康' },
+                { value: 38, name: '新材料' },
+                { value: 32, name: '绿色食品' },
+                { value: 26, name: '其他' }
+            ]
+        }]
+    });
+    window.addEventListener('resize', () => chart.resize());
+})();
+
+// 产业赛道热度
+(function(){
+    const chart = echarts.init(document.getElementById('chart-heat'));
+    chart.setOption({
+        tooltip: { trigger: 'axis', axisPointer:{type:'shadow'} },
+        grid: { top: 10, right: 20, bottom: 25, left: 110 },
+        xAxis: { type: 'value', max: 100, splitLine: { lineStyle: { color:'#E5E1D6', type:'dashed'} } },
+        yAxis: {
+            type: 'category', inverse: true,
+            data: ['通用AI','量子科技','具身智能','新能源汽车','低空经济','新一代IT','生物医药','智能家电','高端装备','新材料'],
+            axisLabel: { fontSize: 11 }, axisLine:{show:false}, axisTick:{show:false}
+        },
+        series: [{
+            type: 'bar', data: [96, 94, 92, 90, 88, 86, 82, 78, 75, 72], barWidth: 12,
+            itemStyle: {
+                borderRadius: [0, 3, 3, 0],
+                color: (p) => p.value>=90?'#B8141A':p.value>=80?'#C9A063':'#1F4A8A'
+            },
+            label: { show: true, position: 'right', fontSize: 10 }
+        }]
+    });
+    window.addEventListener('resize', () => chart.resize());
+})();
+
+// 投后跟踪表
+(function(){
+    const data = [
+        { n:'合肥XX芯片', i:'新一代IT', a:'5亿', e:'15%', yoy:'+68%', c:'达成', cr:'AA', s:'正常' },
+        { n:'蚌埠XX储能', i:'新能源', a:'3亿', e:'12%', yoy:'+125%', c:'超额', cr:'AA-', s:'正常' },
+        { n:'芜湖XX机器人', i:'高端装备', a:'2.5亿', e:'18%', yoy:'+42%', c:'达成', cr:'A+', s:'正常' },
+        { n:'合肥XX生物', i:'生命健康', a:'4亿', e:'22%', yoy:'-12%', c:'未达', cr:'BBB', s:'预警' },
+        { n:'滁州XX材料', i:'新材料', a:'1.8亿', e:'15%', yoy:'+28%', c:'达成', cr:'A', s:'正常' },
+        { n:'马鞍山XX装备', i:'高端装备', a:'3.2亿', e:'20%', yoy:'+5%', c:'待考察', cr:'BBB', s:'关注' }
+    ];
+    const el = document.getElementById('portfolio-rows');
+    el.innerHTML = data.map(d => `
+        <tr>
+            <td class="font-semibold text-wm-secondary">${d.n}</td>
+            <td class="text-xs">${d.i}</td>
+            <td class="font-mono">${d.a}</td>
+            <td class="font-mono">${d.e}</td>
+            <td class="font-mono ${d.yoy.startsWith('+')?'text-emerald-600':'text-red-500'} font-bold">${d.yoy}</td>
+            <td class="text-xs">${d.c==='超额'?'<span class="wm-badge wm-badge-green">超额</span>':d.c==='达成'?'<span class="wm-badge wm-badge-blue">达成</span>':d.c==='未达'?'<span class="wm-badge wm-badge-orange">未达</span>':'<span class="wm-badge">'+d.c+'</span>'}</td>
+            <td><span class="wm-badge ${d.cr.startsWith('AA')?'wm-badge-aaa':d.cr.startsWith('A')?'wm-badge-blue':'wm-badge-orange'}">${d.cr}</span></td>
+            <td><span class="wm-badge ${d.s==='正常'?'wm-badge-green':d.s==='预警'?'wm-badge-red':'wm-badge-orange'}">${d.s}</span></td>
+        </tr>
+    `).join('');
+})();
+
+// 退出路径
+(function(){
+    const chart = echarts.init(document.getElementById('chart-exit'));
+    chart.setOption({
+        tooltip: { trigger:'item' },
+        color: ['#B8141A', '#0F2A56', '#C9A063', '#2B9348'],
+        series: [{
+            type: 'pie', radius: ['45%','70%'],
+            center: ['50%','50%'],
+            label: { formatter: '{b}\n{c}个', fontSize: 11 },
+            data: [
+                { value: 16, name: 'IPO退出' },
+                { value: 20, name: '并购退出' },
+                { value: 13, name: '股权转让' },
+                { value: 9,  name: '回购' }
+            ]
+        }]
+    });
+    window.addEventListener('resize', () => chart.resize());
+})();
+</script>
+
+<script>if (window.WM_C && window.WM_C.bindRoleSwitcher) WM_C.bindRoleSwitcher();</script>
+</body>
+</html>

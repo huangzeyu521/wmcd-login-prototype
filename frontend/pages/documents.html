@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>文档中心 - 皖美信用</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="../assets/css/shared.css?v=p3.1">
+<link rel="stylesheet" href="../assets/css/mvp.css?v=p3.1">
+<link rel="stylesheet" href="../assets/css/ai.css?v=p3.1">
+<script src="../assets/js/shared.js?v=p3.1"></script>
+<script src="../assets/js/interactions.js?v=p3.1"></script>
+<script src="../assets/js/mock-data.js?v=p3.1"></script>
+<script src="../assets/js/auth.js?v=p3.1"></script>
+<script src="../assets/js/tickets.js?v=p3.1"></script>
+<script src="../assets/js/phase2.js?v=p3.1"></script>
+<script src="../assets/js/components.js?v=p3.1"></script>
+<script src="../assets/js/ai-client.js?v=p3.1"></script>
+</head>
+<body class="bg-wm-bg">
+
+<script>if (!window.WM_AUTH.guard()) throw new Error('not logged in');</script>
+
+<div id="topbar-root"></div>
+<script>document.getElementById('topbar-root').outerHTML = WM_C.renderAuthTopbar('documents');</script>
+
+<main class="px-8 py-6 max-w-[1600px] mx-auto">
+    <div class="flex items-center justify-between mb-5">
+        <div>
+            <h1 class="text-2xl font-bold text-wm-secondary">📚 文档中心</h1>
+            <div class="text-xs text-wm-gray3 mt-1">全局文档检索 · 单据附件 · 报告归档</div>
+        </div>
+        <div class="flex items-center gap-2">
+            <input type="text" class="wm-input" id="search-input" placeholder="🔍 搜索文件名…" style="width:300px;">
+        </div>
+    </div>
+
+    <!-- 统计 -->
+    <div class="grid grid-cols-5 gap-4 mb-5" id="stats"></div>
+
+    <div class="grid grid-cols-12 gap-5">
+        <!-- 左：类型筛选 -->
+        <div class="col-span-3">
+            <div class="wm-card">
+                <div class="wm-card-header"><h3>文件类型</h3></div>
+                <div class="p-2" id="type-filter">
+                    <div class="sb-item active" data-type="all"><span>📋</span><span class="flex-1">全部</span></div>
+                    <div class="sb-item" data-type="pdf"><span>📕</span><span class="flex-1">PDF</span></div>
+                    <div class="sb-item" data-type="docx"><span>📘</span><span class="flex-1">Word</span></div>
+                    <div class="sb-item" data-type="xlsx"><span>📗</span><span class="flex-1">Excel</span></div>
+                    <div class="sb-item" data-type="pptx"><span>📙</span><span class="flex-1">PPT</span></div>
+                </div>
+            </div>
+
+            <div class="wm-card mt-4">
+                <div class="wm-card-header"><h3>单据类型</h3></div>
+                <div class="p-2" id="ticket-filter">
+                    <div class="sb-item active" data-ttype="all"><span>📋</span><span class="flex-1">全部</span></div>
+                    ${''}
+                </div>
+            </div>
+        </div>
+
+        <!-- 右：文档列表 -->
+        <div class="col-span-9">
+            <div class="wm-card">
+                <div class="p-4" id="docs-container">
+                    <div class="wm-empty"><div class="empty-icon">📚</div><div class="empty-title">加载中…</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div id="footer-root"></div>
+<script>document.getElementById('footer-root').outerHTML = renderFooter();</script>
+
+<script>
+const user = window.WM_AUTH.currentUser();
+WM_C.bindRoleSwitcher();
+
+let fileTypeFilter = 'all';
+let ticketTypeFilter = 'all';
+let keyword = '';
+
+// 渲染单据类型过滤
+document.getElementById('ticket-filter').innerHTML = `
+    <div class="sb-item active" data-ttype="all"><span>📋</span><span class="flex-1">全部</span></div>
+    ${Object.keys(window.WM_TICKET_TYPES).map(t => {
+        const m = window.WM_TICKET_TYPES[t];
+        return `<div class="sb-item" data-ttype="${t}"><span>${m.icon}</span><span class="flex-1">${m.name}</span></div>`;
+    }).join('')}
+`;
+
+function render() {
+    let attachs = window.WM_P2.getAttachments();
+    if (fileTypeFilter !== 'all') attachs = attachs.filter(a => a.type === fileTypeFilter);
+    if (ticketTypeFilter !== 'all') {
+        attachs = attachs.filter(a => {
+            const t = window.WM_STORE.getTicket(a.ticketId);
+            return t && t.type === ticketTypeFilter;
+        });
+    }
+    if (keyword) attachs = attachs.filter(a => a.name.toLowerCase().includes(keyword.toLowerCase()));
+
+    // 统计
+    const all = window.WM_P2.getAttachments();
+    const totSize = all.reduce((s, a) => s + (a.size || 0), 0);
+    const byType = {};
+    all.forEach(a => byType[a.type] = (byType[a.type] || 0) + 1);
+
+    document.getElementById('stats').innerHTML = `
+        <div class="wm-kpi-mini" style="--kpi-color:#0F2A56;"><div class="kpi-label">📚 全部文档</div><div class="kpi-value">${all.length}</div><div class="kpi-trend">${(totSize / 1024 / 1024).toFixed(1)} MB</div></div>
+        <div class="wm-kpi-mini" style="--kpi-color:#C32427;"><div class="kpi-label">📕 PDF</div><div class="kpi-value">${byType.pdf || 0}</div><div class="kpi-trend">份</div></div>
+        <div class="wm-kpi-mini" style="--kpi-color:#1E5DCA;"><div class="kpi-label">📘 Word</div><div class="kpi-value">${(byType.doc || 0) + (byType.docx || 0)}</div><div class="kpi-trend">份</div></div>
+        <div class="wm-kpi-mini" style="--kpi-color:#1A8340;"><div class="kpi-label">📗 Excel</div><div class="kpi-value">${(byType.xls || 0) + (byType.xlsx || 0)}</div><div class="kpi-trend">份</div></div>
+        <div class="wm-kpi-mini" style="--kpi-color:#C8530F;"><div class="kpi-label">📙 PPT</div><div class="kpi-value">${(byType.ppt || 0) + (byType.pptx || 0)}</div><div class="kpi-trend">份</div></div>
+    `;
+
+    const container = document.getElementById('docs-container');
+    if (!attachs.length) {
+        container.innerHTML = `<div class="wm-empty"><div class="empty-icon">📂</div><div class="empty-title">暂无文档</div></div>`;
+        return;
+    }
+
+    container.innerHTML = `
+        <table class="wm-dtable">
+            <thead>
+                <tr>
+                    <th style="width:40px;"></th>
+                    <th>文件名</th>
+                    <th style="width:120px;">关联单据</th>
+                    <th style="width:90px;">大小</th>
+                    <th style="width:100px;">上传人</th>
+                    <th style="width:130px;">上传时间</th>
+                    <th style="width:100px;">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${attachs.map(a => {
+                    const uploader = window.WM_STORE.getUser(a.uploadedBy);
+                    const t = window.WM_STORE.getTicket(a.ticketId);
+                    const meta = t ? window.WM_TICKET_TYPES[t.type] : null;
+                    const ext = (a.type || '').toLowerCase();
+                    return `
+                    <tr>
+                        <td><div class="wm-attach-icon ${ext}" style="width:32px;height:36px;">${ext.toUpperCase().slice(0, 4)}</div></td>
+                        <td><div class="font-semibold text-wm-secondary">${WM_C.escapeHtml(a.name)}</div></td>
+                        <td>${t ? `<a href="ticket-detail.html?id=${t.id}" class="text-wm-primary hover:underline text-xs">${meta.icon} ${t.id}</a>` : '<span class="text-xs text-wm-gray3">—</span>'}</td>
+                        <td class="text-xs font-mono">${(a.size / 1024 / 1024).toFixed(2)} MB</td>
+                        <td class="text-xs">${uploader ? uploader.shortName : '—'}</td>
+                        <td class="text-xs font-mono">${WM_C.fmtTime(a.ts)}</td>
+                        <td>
+                            <button class="wm-btn wm-btn-ghost wm-btn-sm" style="padding:3px 10px;" onclick="window.showToast('开始下载 ${WM_C.escapeHtml(a.name)}','info')">下载</button>
+                        </td>
+                    </tr>`;
+                }).join('')}
+            </tbody>
+        </table>`;
+}
+
+document.querySelectorAll('#type-filter [data-type]').forEach(el => {
+    el.addEventListener('click', () => {
+        document.querySelectorAll('#type-filter [data-type]').forEach(e => e.classList.remove('active'));
+        el.classList.add('active');
+        fileTypeFilter = el.getAttribute('data-type');
+        render();
+    });
+});
+
+document.querySelectorAll('#ticket-filter [data-ttype]').forEach(el => {
+    el.addEventListener('click', () => {
+        document.querySelectorAll('#ticket-filter [data-ttype]').forEach(e => e.classList.remove('active'));
+        el.classList.add('active');
+        ticketTypeFilter = el.getAttribute('data-ttype');
+        render();
+    });
+});
+
+document.getElementById('search-input').addEventListener('input', e => {
+    keyword = e.target.value.trim();
+    render();
+});
+
+render();
+</script>
+</body>
+</html>

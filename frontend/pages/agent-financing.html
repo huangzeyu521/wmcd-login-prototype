@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>融资支持智能体 - 皖美信用</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<link rel="stylesheet" href="../assets/css/shared.css?v=p3.1">
+<script src="../assets/js/shared.js?v=p3.1"></script>
+<script src="../assets/js/interactions.js?v=p3.1"></script>
+<link rel="stylesheet" href="../assets/css/mvp.css?v=p3.1">
+<link rel="stylesheet" href="../assets/css/ai.css?v=p3.1">
+<script src="../assets/js/mock-data.js?v=p3.1"></script>
+<script src="../assets/js/auth.js?v=p3.1"></script>
+<script src="../assets/js/tickets.js?v=p3.1"></script>
+<script src="../assets/js/phase2.js?v=p3.1"></script>
+<script src="../assets/js/components.js?v=p3.1"></script>
+<script src="../assets/js/ai-client.js?v=p3.1"></script>
+
+<style>
+    .product-card {
+        padding: 14px;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-sm);
+        background: #FFFFFF;
+        transition: all 0.2s;
+        cursor: pointer;
+    }
+    .product-card:hover {
+        border-color: var(--color-primary);
+        box-shadow: var(--shadow-md);
+        transform: translateY(-2px);
+    }
+    .product-card.recommended {
+        border-color: var(--color-accent);
+        background: linear-gradient(180deg, #FDF8EE 0%, #FFFFFF 100%);
+        position: relative;
+    }
+    .product-card.recommended::before {
+        content: "推荐";
+        position: absolute;
+        top: -1px;
+        right: -1px;
+        background: linear-gradient(135deg, #C9A063, #A8823E);
+        color: white;
+        font-size: 10px;
+        padding: 3px 10px;
+        border-radius: 0 4px 0 6px;
+        font-weight: 700;
+    }
+    .step-dot {
+        width: 28px; height: 28px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 12px;
+        flex-shrink: 0;
+    }
+    .step-dot.done { background: #2B9348; color: white; }
+    .step-dot.active { background: linear-gradient(135deg, #B8141A, #8A0F14); color: white; box-shadow: 0 0 0 4px rgba(184,20,26,0.15); }
+    .step-dot.wait { background: #F5F3EE; color: #7A7A7A; border: 1px solid #D4CEB8; }
+    .inst-row {
+        display: grid;
+        grid-template-columns: 40px 1fr 90px 100px 90px;
+        gap: 10px;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--color-border);
+    }
+    .inst-row:last-child { border-bottom: none; }
+    .breadcrumb { color: var(--color-text-3); font-size: 12px; }
+    .breadcrumb a { color: var(--color-secondary); text-decoration: none; }
+    .breadcrumb a:hover { color: var(--color-primary); }
+    .breadcrumb .sep { margin: 0 6px; color: var(--color-border-2); }
+</style>
+</head>
+<body class="bg-wm-bg">
+<script>if (!window.WM_AUTH || !window.WM_AUTH.guard()) throw new Error("not logged in");</script>
+
+<div id="topbar-root"></div>
+<script>document.getElementById('topbar-root').outerHTML = WM_C.renderAuthTopbar('financing');</script>
+
+<div class="bg-white border-b border-wm px-8 py-3">
+    <nav class="breadcrumb">
+        <a href="index.html">🏠 首页</a><span class="sep">/</span>
+        <a href="index.html">七大智能体</a><span class="sep">/</span>
+        <span style="color:var(--color-primary);font-weight:600;">💰 国企融资支持智能体</span>
+    </nav>
+</div>
+
+<div class="flex">
+    <!-- 左侧导航 -->
+    <aside class="wm-sidebar" style="width:220px;min-height:calc(100vh - 120px);">
+        <div class="p-4 border-b border-wm">
+            <div class="text-xs text-wm-gray3 tracking-widest">AGENT · MODULE</div>
+            <div class="text-base font-bold text-wm-primary mt-1">融资支持智能体</div>
+            <div class="text-xs text-wm-gray mt-1">Financing Support · 价值变现层</div>
+        </div>
+        <div class="py-2">
+            <div class="sb-item active"><span>🧭</span> 融资诊断总览</div>
+            <div class="sb-item"><span>🗂</span> 金融产品全库</div>
+            <div class="sb-item"><span>✨</span> 智能方案推荐</div>
+            <div class="sb-item"><span>💹</span> 成本对比测算</div>
+            <div class="sb-item"><span>🏦</span> 金融机构对接</div>
+            <div class="sb-item"><span>📅</span> 债务到期日历</div>
+            <div class="sb-item"><span>⚠</span> 债务风险预警</div>
+            <div class="sb-item"><span>📄</span> 资本市场发行</div>
+            <div class="sb-item"><span>🌿</span> 绿色/科创专项</div>
+        </div>
+    </aside>
+
+    <!-- 主内容 -->
+    <main class="flex-1 p-6" style="min-width:0;">
+
+        <!-- 顶部操作栏 -->
+        <div class="flex items-center justify-between mb-5">
+            <div>
+                <div class="flex items-center gap-3 mb-1">
+                    <h1 class="text-2xl font-bold text-wm-secondary">融资诊断与方案推荐</h1>
+                    <span class="wm-badge" style="background:rgba(15,42,86,0.08);color:#0F2A56;border:1px solid #0F2A5655;">价值变现层</span>
+                </div>
+                <div class="text-xs text-wm-gray3">Financing Support Agent · 将信用优势转化为融资成本优势</div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button class="wm-btn wm-btn-ghost wm-btn-sm">📋 历史方案</button>
+                <button class="wm-btn wm-btn-ghost wm-btn-sm">📊 成本对比</button>
+                <button class="wm-btn wm-btn-gold wm-btn-sm">🤖 AI诊断</button>
+                <a href="ticket-new.html?type=financing" class="wm-btn wm-btn-primary wm-btn-sm" style="text-decoration:none;">＋ 新建融资需求</a>
+            </div>
+        </div>
+
+        <!-- 融资需求进度条 -->
+        <div class="wm-card mb-4">
+            <div class="p-5">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-sm font-bold text-wm-secondary">当前融资需求：<span class="text-wm-primary">#FIN-2026-0418-001 · 皖能集团 · 50亿元 · 5年期</span></h3>
+                    <span class="wm-badge wm-badge-blue">对接中</span>
+                </div>
+                <div class="flex items-center justify-between relative">
+                    <div class="absolute left-[28px] right-[28px] top-[14px] h-0.5 bg-gray-200 -z-0"></div>
+                    <div class="absolute left-[28px] top-[14px] h-0.5 bg-emerald-500 z-10" style="width:calc(50% - 28px);"></div>
+
+                    <div class="flex flex-col items-center z-20">
+                        <div class="step-dot done">✓</div>
+                        <div class="text-xs text-emerald-600 font-semibold mt-1">需求录入</div>
+                        <div class="text-xs text-wm-gray3">04-18 09:00</div>
+                    </div>
+                    <div class="flex flex-col items-center z-20">
+                        <div class="step-dot done">✓</div>
+                        <div class="text-xs text-emerald-600 font-semibold mt-1">信用诊断</div>
+                        <div class="text-xs text-wm-gray3">04-18 09:15</div>
+                    </div>
+                    <div class="flex flex-col items-center z-20">
+                        <div class="step-dot done">✓</div>
+                        <div class="text-xs text-emerald-600 font-semibold mt-1">方案生成</div>
+                        <div class="text-xs text-wm-gray3">04-18 09:32</div>
+                    </div>
+                    <div class="flex flex-col items-center z-20">
+                        <div class="step-dot active">4</div>
+                        <div class="text-xs text-wm-primary font-semibold mt-1">机构对接</div>
+                        <div class="text-xs text-wm-gray3">进行中</div>
+                    </div>
+                    <div class="flex flex-col items-center z-20">
+                        <div class="step-dot wait">5</div>
+                        <div class="text-xs text-wm-gray3 mt-1">审批签约</div>
+                        <div class="text-xs text-wm-gray3">待启动</div>
+                    </div>
+                    <div class="flex flex-col items-center z-20">
+                        <div class="step-dot wait">6</div>
+                        <div class="text-xs text-wm-gray3 mt-1">融资落地</div>
+                        <div class="text-xs text-wm-gray3">待启动</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 融资结构诊断 + 核心指标 -->
+        <div class="grid grid-cols-12 gap-4 mb-4">
+            <!-- 融资诊断雷达 -->
+            <div class="wm-card col-span-5">
+                <div class="wm-card-header">
+                    <h3>融资结构智能诊断</h3>
+                    <span class="wm-badge wm-badge-orange">3项待优化</span>
+                </div>
+                <div class="p-4">
+                    <div id="chart-diagnose" style="height:300px;"></div>
+                </div>
+            </div>
+
+            <!-- 债务结构 -->
+            <div class="wm-card col-span-4">
+                <div class="wm-card-header">
+                    <h3>存量债务结构</h3>
+                    <span class="text-xs text-wm-gray3">合计 <span class="font-mono font-bold text-wm-secondary">238.5亿</span></span>
+                </div>
+                <div class="p-4">
+                    <div id="chart-debt" style="height:300px;"></div>
+                </div>
+            </div>
+
+            <!-- 核心融资指标 -->
+            <div class="wm-card col-span-3">
+                <div class="wm-card-header"><h3>核心指标</h3></div>
+                <div class="p-4 space-y-3">
+                    <div class="flex items-center justify-between p-2 rounded bg-wm-bg">
+                        <span class="text-xs text-wm-gray">综合融资成本</span>
+                        <span class="font-mono font-bold text-wm-primary">4.28%</span>
+                    </div>
+                    <div class="flex items-center justify-between p-2 rounded bg-wm-bg">
+                        <span class="text-xs text-wm-gray">较同业均值</span>
+                        <span class="font-mono font-bold text-emerald-600">↓ 62bps</span>
+                    </div>
+                    <div class="flex items-center justify-between p-2 rounded bg-wm-bg">
+                        <span class="text-xs text-wm-gray">短长债比</span>
+                        <span class="font-mono font-bold" style="color:#E8A33D;">58:42</span>
+                    </div>
+                    <div class="flex items-center justify-between p-2 rounded bg-wm-bg">
+                        <span class="text-xs text-wm-gray">授信额度使用率</span>
+                        <span class="font-mono font-bold text-wm-secondary">67%</span>
+                    </div>
+                    <div class="flex items-center justify-between p-2 rounded bg-wm-bg">
+                        <span class="text-xs text-wm-gray">担保覆盖率</span>
+                        <span class="font-mono font-bold text-wm-secondary">118%</span>
+                    </div>
+                    <div class="flex items-center justify-between p-2 rounded bg-wm-bg">
+                        <span class="text-xs text-wm-gray">直接融资占比</span>
+                        <span class="font-mono font-bold" style="color:#E8A33D;">34%</span>
+                    </div>
+                    <div class="flex items-center justify-between p-2 rounded bg-wm-bg">
+                        <span class="text-xs text-wm-gray">平均久期</span>
+                        <span class="font-mono font-bold text-wm-secondary">3.2年</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 金融产品全品类矩阵 -->
+        <div class="wm-card mb-4">
+            <div class="wm-card-header">
+                <h3>金融产品全品类矩阵（10+ 品类 · 适配度智能匹配）</h3>
+                <div class="flex gap-2 items-center">
+                    <span class="text-xs text-wm-gray3">筛选：</span>
+                    <button class="wm-btn wm-btn-primary wm-btn-sm" style="padding:3px 10px;">全部</button>
+                    <button class="wm-btn wm-btn-ghost wm-btn-sm" style="padding:3px 10px;">债务型</button>
+                    <button class="wm-btn wm-btn-ghost wm-btn-sm" style="padding:3px 10px;">股权型</button>
+                    <button class="wm-btn wm-btn-ghost wm-btn-sm" style="padding:3px 10px;">证券化</button>
+                    <button class="wm-btn wm-btn-ghost wm-btn-sm" style="padding:3px 10px;">专项</button>
+                </div>
+            </div>
+            <div class="p-4 grid grid-cols-5 gap-3" id="products-grid"></div>
+        </div>
+
+        <!-- AI推荐方案TOP3对比 -->
+        <div class="grid grid-cols-12 gap-4 mb-4">
+            <div class="wm-card col-span-8">
+                <div class="wm-card-header">
+                    <h3>AI智能推荐方案 TOP 3 · 综合成本最优</h3>
+                    <span class="wm-badge wm-badge-aaa">AI生成</span>
+                </div>
+                <div class="p-4">
+                    <table class="wm-table">
+                        <thead>
+                            <tr>
+                                <th>方案</th><th>产品组合</th><th>金额</th><th>期限</th>
+                                <th>综合成本</th><th>优势</th><th>对接状态</th><th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="plans-rows"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 成本对比曲线 -->
+            <div class="wm-card col-span-4">
+                <div class="wm-card-header"><h3>综合成本对比</h3></div>
+                <div class="p-4">
+                    <div id="chart-cost" style="height:280px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 金融机构对接 + 到期日历 -->
+        <div class="grid grid-cols-12 gap-4 mb-4">
+            <!-- 金融机构对接 -->
+            <div class="wm-card col-span-7">
+                <div class="wm-card-header">
+                    <h3>合作金融机构对接工作台</h3>
+                    <span class="text-xs text-wm-gray3">本次推送：<span class="font-bold text-wm-primary">12</span> 家 · 已反馈 <span class="font-bold text-wm-secondary">8</span> 家</span>
+                </div>
+                <div class="p-5" id="inst-list"></div>
+            </div>
+
+            <!-- 债务到期日历 -->
+            <div class="wm-card col-span-5">
+                <div class="wm-card-header">
+                    <h3>债务到期日历（未来6月）</h3>
+                    <span class="wm-badge wm-badge-orange">3笔集中</span>
+                </div>
+                <div class="p-4">
+                    <div id="chart-calendar" style="height:300px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 绿色/科创专项 + AI解读 -->
+        <div class="grid grid-cols-12 gap-4">
+            <div class="wm-card col-span-5">
+                <div class="wm-card-header">
+                    <h3>🌿 绿色/科创专项通道</h3>
+                    <span class="wm-badge wm-badge-green">资质达标</span>
+                </div>
+                <div class="p-4 space-y-3">
+                    <div class="p-3 rounded border border-emerald-200" style="background:rgba(43,147,72,0.04);">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl">🌿</span>
+                                <span class="font-bold text-emerald-700">绿色债券通道</span>
+                            </div>
+                            <span class="wm-badge wm-badge-green">可发行 50亿</span>
+                        </div>
+                        <div class="text-xs text-wm-gray mb-2">已对接深交所绿色债券体系 · 对应安徽绿色转型区战略</div>
+                        <div class="grid grid-cols-3 gap-2 text-xs">
+                            <div><span class="text-wm-gray3">预期利率</span><br><span class="font-mono font-bold">2.95-3.15%</span></div>
+                            <div><span class="text-wm-gray3">ESG评级</span><br><span class="font-mono font-bold">A+</span></div>
+                            <div><span class="text-wm-gray3">审批周期</span><br><span class="font-mono font-bold">45日</span></div>
+                        </div>
+                    </div>
+                    <div class="p-3 rounded border border-blue-200" style="background:rgba(15,42,86,0.04);">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl">🔬</span>
+                                <span class="font-bold text-wm-secondary">科创债"科技板"通道</span>
+                            </div>
+                            <span class="wm-badge wm-badge-blue">可发行 30亿</span>
+                        </div>
+                        <div class="text-xs text-wm-gray mb-2">银行间交易商协会"科技板" · 2025已发1.87万亿</div>
+                        <div class="grid grid-cols-3 gap-2 text-xs">
+                            <div><span class="text-wm-gray3">预期利率</span><br><span class="font-mono font-bold">3.20-3.50%</span></div>
+                            <div><span class="text-wm-gray3">科创属性</span><br><span class="font-mono font-bold">R&D占比 4.8%</span></div>
+                            <div><span class="text-wm-gray3">审批周期</span><br><span class="font-mono font-bold">60日</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="wm-card col-span-7">
+                <div class="wm-card-header">
+                    <h3>AI 融资诊断与建议</h3>
+                    <span class="text-xs text-wm-gray3">基于垂直大模型 v2.3</span>
+                </div>
+                <div class="p-5" style="max-height:330px;overflow-y:auto;">
+                    <div class="p-3 mb-3" style="background:linear-gradient(135deg,rgba(15,42,86,0.03),rgba(184,20,26,0.02));border-left:3px solid var(--color-secondary);border-radius:0 6px 6px 0;">
+                        <div class="text-sm font-semibold text-wm-secondary mb-1">📊 综合诊断</div>
+                        <div class="text-sm text-wm-gray leading-relaxed">
+                            当前融资结构整体 <strong>健康</strong>，综合成本 <strong>4.28%</strong> 处于同业优秀区间。但存在三处结构失衡：<strong>短债占比偏高（58%）</strong>、<strong>直接融资占比偏低（34%）</strong>、<strong>担保结构中互保比例较高（22%）</strong>，需通过本次50亿元融资方案进行穿透式优化。
+                        </div>
+                    </div>
+                    <div class="p-3 mb-3" style="background:rgba(201,160,99,0.06);border-left:3px solid var(--color-accent);border-radius:0 6px 6px 0;">
+                        <div class="text-sm font-semibold mb-1" style="color:#A8823E;">💡 最优推荐</div>
+                        <div class="text-sm text-wm-gray leading-relaxed">
+                            推荐方案 <strong>A：5年期公司债30亿 + 绿色债券20亿</strong>，综合成本 <strong>3.68%</strong>（较现行下降60bps），同时实现：短长债比优化至45:55、直接融资占比提升至42%、绿色项目专项通道获得政策利好。
+                        </div>
+                    </div>
+                    <div class="p-3 mb-3" style="background:rgba(184,20,26,0.04);border-left:3px solid var(--color-primary);border-radius:0 6px 6px 0;">
+                        <div class="text-sm font-semibold text-wm-primary mb-1">⚠ 风险提示</div>
+                        <div class="text-sm text-wm-gray leading-relaxed">
+                            需注意 <strong>2026年Q3</strong> 有 <strong>3笔集中到期</strong>（共28亿元），建议将本次融资中 <strong>20亿元</strong> 用于接续，避免流动性风险。已联动<a href="agent-risk.html" class="text-wm-primary hover:underline">风险防控智能体</a>持续监测。
+                        </div>
+                    </div>
+                    <div class="text-xs text-wm-gray3 pt-3 border-t border-wm">
+                        📎 数据来源：企业2025年报、同业对标数据库（89家省属）、深交所绿色债券白皮书、银行间市场交易商协会科技板新政
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<div id="footer-root"></div>
+<script>document.getElementById('footer-root').outerHTML = renderFooter();</script>
+
+<script>
+// ===== 融资结构诊断雷达 =====
+(function(){
+    const chart = echarts.init(document.getElementById('chart-diagnose'));
+    chart.setOption({
+        tooltip: {},
+        radar: {
+            indicator: [
+                { name:'期限结构', max:100 },
+                { name:'成本水平', max:100 },
+                { name:'品种多样性', max:100 },
+                { name:'担保结构', max:100 },
+                { name:'授信利用率', max:100 },
+                { name:'直接融资占比', max:100 }
+            ],
+            radius: '65%',
+            splitArea: { areaStyle: { color: ['rgba(201,160,99,0.03)', 'rgba(15,42,86,0.02)'] } },
+            axisName: { color: '#4A4A4A', fontSize: 11, fontWeight: 600 },
+            splitLine: { lineStyle: { color: '#D4CEB8' } }
+        },
+        series: [{
+            type: 'radar',
+            data: [
+                { value: [62, 86, 78, 72, 82, 58], name: '现状',
+                  areaStyle: { color: 'rgba(232, 163, 61, 0.18)' },
+                  lineStyle: { color: '#E8A33D', width: 2 },
+                  itemStyle: { color: '#E8A33D' } },
+                { value: [82, 92, 88, 86, 85, 78], name: '优化后',
+                  areaStyle: { color: 'rgba(184, 20, 26, 0.18)' },
+                  lineStyle: { color: '#B8141A', width: 2 },
+                  itemStyle: { color: '#B8141A' } }
+            ]
+        }]
+    });
+    window.addEventListener('resize', () => chart.resize());
+})();
+
+// ===== 存量债务结构 =====
+(function(){
+    const chart = echarts.init(document.getElementById('chart-debt'));
+    chart.setOption({
+        tooltip: { trigger: 'item', formatter: '{b}<br/>金额: {c} 亿<br/>占比: {d}%' },
+        legend: { orient:'vertical', right: 0, top: 'center', textStyle: { fontSize: 11 } },
+        color: ['#B8141A', '#8A0F14', '#0F2A56', '#1F4A8A', '#C9A063', '#A8823E'],
+        series: [{
+            type: 'pie',
+            radius: ['45%', '68%'],
+            center: ['35%', '50%'],
+            label: { formatter: '{b}\n{d}%', fontSize: 11 },
+            data: [
+                { value: 82, name: '银行流贷' },
+                { value: 56, name: '项贷' },
+                { value: 38, name: '公司债' },
+                { value: 28, name: '中票短融' },
+                { value: 22, name: '融资租赁' },
+                { value: 12, name: '其他' }
+            ]
+        }]
+    });
+    window.addEventListener('resize', () => chart.resize());
+})();
+
+// ===== 金融产品矩阵 =====
+(function(){
+    const products = [
+        { name:'银行流贷', cat:'债务', rate:'LPR+0', match:88, amount:'30亿', term:'1-3年', recommended:false },
+        { name:'银行项贷', cat:'债务', rate:'3.5%', match:78, amount:'50亿', term:'5-10年', recommended:false },
+        { name:'公司债', cat:'债务', rate:'3.68%', match:95, amount:'30亿', term:'3-7年', recommended:true },
+        { name:'中票', cat:'债务', rate:'3.45%', match:85, amount:'20亿', term:'3-5年', recommended:false },
+        { name:'超短融', cat:'债务', rate:'2.85%', match:72, amount:'10亿', term:'<270日', recommended:false },
+        { name:'科创债', cat:'专项', rate:'3.25%', match:86, amount:'30亿', term:'3-5年', recommended:false },
+        { name:'绿色债券', cat:'专项', rate:'3.05%', match:92, amount:'20亿', term:'5-7年', recommended:true },
+        { name:'REITs', cat:'证券化', rate:'股息率5.8%', match:75, amount:'25亿', term:'存续期', recommended:false },
+        { name:'ABS', cat:'证券化', rate:'4.15%', match:68, amount:'15亿', term:'2-5年', recommended:false },
+        { name:'持有型ABS', cat:'证券化', rate:'4.25%', match:64, amount:'10亿', term:'5年', recommended:false }
+    ];
+    const catColor = { '债务':'#0F2A56', '专项':'#2B9348', '证券化':'#C9A063' };
+    document.getElementById('products-grid').innerHTML = products.map(p => `
+        <div class="product-card ${p.recommended?'recommended':''}">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-bold text-wm-secondary">${p.name}</span>
+                <span class="wm-tag" style="color:${catColor[p.cat]};border-color:${catColor[p.cat]}55;">${p.cat}</span>
+            </div>
+            <div class="grid grid-cols-2 gap-1 text-xs mb-2">
+                <div><span class="text-wm-gray3">利率</span><br><span class="font-mono font-bold text-wm-primary">${p.rate}</span></div>
+                <div><span class="text-wm-gray3">期限</span><br><span class="font-mono">${p.term}</span></div>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="text-xs text-wm-gray3">匹配度</div>
+                <div class="flex-1 wm-progress" style="height:5px;">
+                    <div style="width:${p.match}%;"></div>
+                </div>
+                <span class="font-mono text-xs font-bold" style="color:var(--color-primary);">${p.match}</span>
+            </div>
+        </div>
+    `).join('');
+})();
+
+// ===== 推荐方案表格 =====
+(function(){
+    const plans = [
+        { id:'A', products:'5年期公司债30亿 + 绿色债券20亿', amount:'50亿', term:'5-7年', cost:'3.68%', pros:'成本最优、直接融资、绿色专项', status:'对接中' },
+        { id:'B', products:'科创债30亿 + 银行项贷20亿', amount:'50亿', term:'3-5年', cost:'3.95%', pros:'科技属性、银企组合', status:'待对接' },
+        { id:'C', products:'REITs 25亿 + 中票25亿', amount:'50亿', term:'5年+', cost:'4.12%', pros:'资产盘活联动、直接融资', status:'待对接' }
+    ];
+    const el = document.getElementById('plans-rows');
+    el.innerHTML = plans.map((p, i) => `
+        <tr style="${p.id==='A'?'background:rgba(201,160,99,0.06);':''}">
+            <td><div class="w-7 h-7 rounded-full flex items-center justify-center font-bold text-white" style="background:${p.id==='A'?'linear-gradient(135deg,#C9A063,#A8823E)':'linear-gradient(135deg,#0F2A56,#1F4A8A)'};">${p.id}</div></td>
+            <td class="text-xs">${p.products}</td>
+            <td class="font-mono font-bold text-wm-primary">${p.amount}</td>
+            <td class="font-mono">${p.term}</td>
+            <td class="font-mono font-bold ${p.id==='A'?'text-emerald-600':'text-wm-secondary'}">${p.cost}</td>
+            <td class="text-xs text-wm-gray">${p.pros}</td>
+            <td><span class="wm-badge ${p.status==='对接中'?'wm-badge-blue':'wm-badge-orange'}">${p.status}</span></td>
+            <td><button class="wm-btn ${p.id==='A'?'wm-btn-primary':'wm-btn-ghost'} wm-btn-sm" style="padding:3px 10px;">${p.id==='A'?'深入':'对比'}</button></td>
+        </tr>
+    `).join('');
+})();
+
+// ===== 成本对比 =====
+(function(){
+    const chart = echarts.init(document.getElementById('chart-cost'));
+    chart.setOption({
+        tooltip: { trigger:'axis' },
+        grid: { top: 30, right: 15, bottom: 25, left: 45 },
+        xAxis: { type: 'category', data: ['方案A','方案B','方案C','现行','同业均值','同业最优'], axisLabel: { fontSize: 10 } },
+        yAxis: { type: 'value', name: '%', splitLine: { lineStyle: { color:'#E5E1D6', type:'dashed' } } },
+        series: [{
+            type: 'bar', data: [3.68, 3.95, 4.12, 4.28, 4.90, 3.55], barWidth: 22,
+            itemStyle: {
+                borderRadius: [4, 4, 0, 0],
+                color: (p) => {
+                    const map = [0,1,2,3,4,5];
+                    const colors = ['#C9A063', '#0F2A56', '#1F4A8A', '#E8A33D', '#D64045', '#2B9348'];
+                    return colors[p.dataIndex];
+                }
+            },
+            label: { show: true, position: 'top', formatter: '{c}%', fontSize: 11, fontWeight: 600 }
+        }]
+    });
+    window.addEventListener('resize', () => chart.resize());
+})();
+
+// ===== 金融机构对接列表 =====
+(function(){
+    const insts = [
+        { name:'工商银行合肥分行', type:'国有大行', rate:'3.85%', amount:'20亿', status:'已授信' },
+        { name:'建设银行安徽分行', type:'国有大行', rate:'3.82%', amount:'15亿', status:'已授信' },
+        { name:'农业银行安徽分行', type:'国有大行', rate:'3.90%', amount:'15亿', status:'审批中' },
+        { name:'兴业银行合肥分行', type:'股份制', rate:'3.95%', amount:'12亿', status:'审批中' },
+        { name:'徽商银行', type:'城商行', rate:'4.05%', amount:'10亿', status:'意向' },
+        { name:'中信证券', type:'券商', rate:'3.68%债', amount:'30亿', status:'主承销商' },
+        { name:'国元证券', type:'券商', rate:'3.72%债', amount:'20亿', status:'意向' },
+        { name:'光大银行', type:'股份制', rate:'3.98%', amount:'10亿', status:'待反馈' }
+    ];
+    const statusColor = { '已授信':'green', '审批中':'orange', '意向':'blue', '主承销商':'red', '待反馈':'orange' };
+    document.getElementById('inst-list').innerHTML = insts.map(i => `
+        <div class="inst-row">
+            <div class="w-9 h-9 rounded bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center text-amber-900 font-bold text-sm">${i.name.slice(0,1)}</div>
+            <div>
+                <div class="text-sm font-semibold text-wm-secondary">${i.name}</div>
+                <div class="text-xs text-wm-gray3">${i.type}</div>
+            </div>
+            <div class="text-xs font-mono font-bold text-wm-primary">${i.rate}</div>
+            <div class="text-xs">
+                <div class="text-wm-gray3">意向额度</div>
+                <div class="font-mono font-bold text-wm-secondary">${i.amount}</div>
+            </div>
+            <div class="text-right">
+                <span class="wm-badge wm-badge-${statusColor[i.status]}">${i.status}</span>
+            </div>
+        </div>
+    `).join('');
+})();
+
+// ===== 到期日历（柱状+折线） =====
+(function(){
+    const chart = echarts.init(document.getElementById('chart-calendar'));
+    const months = ['5月','6月','7月','8月','9月','10月'];
+    chart.setOption({
+        tooltip: { trigger: 'axis' },
+        legend: { data:['到期本金(亿)','笔数'], top: 0, textStyle: { fontSize: 11 } },
+        grid: { top: 32, right: 50, bottom: 25, left: 45 },
+        xAxis: { type: 'category', data: months, axisLabel: { color: '#7A7A7A' } },
+        yAxis: [
+            { type: 'value', name: '亿', nameTextStyle: { color:'#7A7A7A' }, splitLine: { lineStyle: { color:'#E5E1D6', type:'dashed' } } },
+            { type: 'value', name: '笔数', splitLine: { show: false } }
+        ],
+        series: [
+            { name:'到期本金(亿)', type:'bar', data:[5, 8, 28, 12, 6, 18], barWidth: 20,
+              itemStyle: { borderRadius:[3,3,0,0], color: (p) => p.value>=20?'#D64045':p.value>=10?'#E8A33D':'#2B9348' },
+              label: { show: true, position: 'top', formatter: '{c}亿', fontSize: 10 }
+            },
+            { name:'笔数', type:'line', yAxisIndex: 1, smooth: true, data:[2,3,5,4,2,3], symbol:'circle', symbolSize:6,
+              itemStyle: { color: '#0F2A56' }, lineStyle: { width: 2 } }
+        ]
+    });
+    window.addEventListener('resize', () => chart.resize());
+})();
+</script>
+
+<script>if (window.WM_C && window.WM_C.bindRoleSwitcher) WM_C.bindRoleSwitcher();</script>
+</body>
+</html>

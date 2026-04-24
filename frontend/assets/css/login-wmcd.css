@@ -1,0 +1,1731 @@
+/* ============================================================
+   皖美信用登录页 · 融合设计样式 (WMCD-LOGIN)
+   ------------------------------------------------------------
+   设计：信印启封 × 中式起承顿收 × 红金封域五色
+   版本：v1.0
+   状态驱动：data-theme="dark|light" · data-stage="SEALED|RELEASING|UNSEALED|RESEALING"
+   ============================================================ */
+
+/* ---------- 1. WM 红金封域五色令牌 · 跨版本共享 ---------- */
+:root {
+    /* 基础色常量（两版共享） */
+    --wm-zhuni:       #B8141A;  /* 朱泥红 */
+    --wm-zhuni-deep:  #8A0F14;
+    --wm-zhuni-soft:  #A51319;  /* 浅色版减饱和 */
+    --wm-liujin:      #C9A063;  /* 鎏金晖 */
+    --wm-liujin-soft: #B88E4A;
+    --wm-huimo:       #0D1119;  /* 徽墨玄 */
+    --wm-huimo-alt:   #141A25;
+    --wm-wanbai:      #F5F1E6;  /* 皖白宣 */
+    --wm-wanbai-alt:  #EDE7D6;
+    --wm-daiqing:     #4A5563;  /* 黛青 */
+    --wm-daiqing-soft:#6A7580;
+
+    /* 动画时长令牌 */
+    --dur-qi:   400ms;   /* 起 */
+    --dur-cheng:250ms;   /* 承 */
+    --dur-dun:   80ms;   /* 顿 */
+    --dur-shou: 150ms;   /* 收 */
+
+    /* 贝塞尔曲线（中式起承顿收） */
+    --ease-qi:   cubic-bezier(.25,.8,.35,1);
+    --ease-cheng:cubic-bezier(.77,0,.18,1);
+    --ease-dun:  cubic-bezier(.18,1.2,.6,1);
+    --ease-shou: cubic-bezier(.39,.58,.57,1);
+
+    /* 阈值（JS 端同步） */
+    --seal-threshold: 0.4;
+}
+
+/* ---------- 2. 深色沉浸专业版 · 默认 ---------- */
+[data-theme="dark"] {
+    --wm-bg:        var(--wm-huimo);
+    --wm-bg-alt:    var(--wm-huimo-alt);
+    --wm-ink:       #E8E4D6;
+    --wm-ink-soft:  #9BA3B0;
+    --wm-ink-dim:   #5B6472;
+    --wm-primary:   var(--wm-zhuni);
+    --wm-accent:    var(--wm-liujin);
+    --wm-line:      rgba(201, 160, 99, 0.18);
+    --wm-line-strong:rgba(201, 160, 99, 0.35);
+    --wm-card-bg:   rgba(13, 17, 25, 0.72);
+    --wm-card-border:rgba(201, 160, 99, 0.25);
+    --wm-glow:      rgba(201, 160, 99, 0.18);
+    --wm-glow-strong:rgba(201, 160, 99, 0.38);
+    --wm-input-bg:  rgba(20, 26, 37, 0.55);
+    --wm-input-border:rgba(201, 160, 99, 0.22);
+    --wm-input-text:#EDEAD5;
+    --wm-shadow:    0 20px 45px -18px rgba(0, 0, 0, .85);
+    color-scheme: dark;
+}
+
+/* ---------- 3. 浅色稳重办公版 ---------- */
+[data-theme="light"] {
+    --wm-bg:        var(--wm-wanbai);
+    --wm-bg-alt:    var(--wm-wanbai-alt);
+    --wm-ink:       #2A2620;
+    --wm-ink-soft:  #5A5448;
+    --wm-ink-dim:   #8A8370;
+    --wm-primary:   var(--wm-zhuni-soft);
+    --wm-accent:    var(--wm-liujin-soft);
+    --wm-line:      rgba(74, 85, 99, 0.14);
+    --wm-line-strong:rgba(74, 85, 99, 0.28);
+    --wm-card-bg:   rgba(255, 253, 246, 0.86);
+    --wm-card-border:rgba(184, 142, 74, 0.30);
+    --wm-glow:      rgba(184, 142, 74, 0.10);
+    --wm-glow-strong:rgba(184, 142, 74, 0.20);
+    --wm-input-bg:  rgba(255, 255, 255, 0.65);
+    --wm-input-border:rgba(74, 85, 99, 0.22);
+    --wm-input-text:#1F1B15;
+    --wm-shadow:    0 16px 42px -22px rgba(60, 40, 20, .22);
+    color-scheme: light;
+}
+
+/* ---------- 4. 基础重置与页面容器 ---------- */
+html, body.wm-login-page {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    min-height: 100vh;
+    font-family: "Microsoft YaHei","PingFang SC","Source Han Sans CN",sans-serif;
+    color: var(--wm-ink);
+    background: var(--wm-bg);
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    transition: background-color 600ms var(--ease-qi), color 600ms var(--ease-qi);
+}
+
+/* 深色版远山暗纹 */
+[data-theme="dark"] body.wm-login-page {
+    background:
+        radial-gradient(ellipse at 50% 120%, rgba(201, 160, 99, 0.06) 0%, transparent 55%),
+        radial-gradient(ellipse at 20% 80%, rgba(184, 20, 26, 0.04) 0%, transparent 50%),
+        linear-gradient(180deg, #0A0D14 0%, var(--wm-huimo) 40%, #050810 100%);
+}
+
+/* 浅色版宣纸纤维 */
+[data-theme="light"] body.wm-login-page {
+    background:
+        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240'><g fill='none' stroke='%238a7355' stroke-width='0.4' opacity='0.08'><path d='M0 30 Q60 24 120 30 T240 30'/><path d='M0 60 Q60 66 120 60 T240 60'/><path d='M0 90 Q60 84 120 90 T240 90'/><path d='M0 120 Q60 126 120 120 T240 120'/><path d='M0 150 Q60 144 120 150 T240 150'/><path d='M0 180 Q60 186 120 180 T240 180'/><path d='M0 210 Q60 204 120 210 T240 210'/></g></svg>"),
+        radial-gradient(ellipse at 50% 100%, rgba(184, 142, 74, 0.08) 0%, transparent 55%),
+        linear-gradient(180deg, #FBF7E8 0%, var(--wm-wanbai) 45%, #ECE5D2 100%);
+}
+
+/* ---------- 5. 主栅格布局 ---------- */
+.wm-login-root {
+    min-height: 100vh;
+    display: grid;
+    grid-template-rows: 80px 1fr 88px;
+    position: relative;
+    z-index: 1;
+}
+
+.wm-login-main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    max-width: 1440px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 0 80px;
+    gap: 60px;
+    box-sizing: border-box;
+}
+
+@media (max-width: 1440px) { .wm-login-main { padding: 0 60px; gap: 40px; } }
+@media (max-width: 1280px) { .wm-login-main { padding: 0 40px; gap: 28px; } }
+@media (max-width: 1024px) {
+    .wm-login-root { grid-template-rows: 72px 1fr auto; }
+    .wm-login-main {
+        grid-template-columns: 1fr;
+        padding: 0 24px;
+        gap: 28px;
+        padding-top: 16px;
+        padding-bottom: 24px;
+    }
+}
+
+/* ---------- 6. 顶部锚定区（Logo + 快捷通道） ---------- */
+.wm-login-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 40px;
+    height: 80px;
+    border-bottom: 1px solid var(--wm-line);
+    backdrop-filter: blur(8px);
+    background: linear-gradient(180deg, rgba(0,0,0,0.08) 0%, transparent 100%);
+}
+[data-theme="light"] .wm-login-header {
+    background: linear-gradient(180deg, rgba(255,255,255,0.35) 0%, transparent 100%);
+}
+.wm-brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    text-decoration: none;
+    color: inherit;
+}
+.wm-brand-mark {
+    width: 46px;
+    height: 46px;
+    border-radius: 4px;
+    background: linear-gradient(135deg, var(--wm-accent) 0%, var(--wm-liujin-soft) 100%);
+    color: var(--wm-zhuni-deep);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "SimSun","STSong",serif;
+    font-weight: 900;
+    font-size: 24px;
+    letter-spacing: 0;
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,0.25), 0 2px 6px rgba(0,0,0,0.2);
+}
+.wm-brand-text {
+    font-family: "SimSun","STSong",serif;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    color: var(--wm-ink);
+}
+.wm-brand-sub {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--wm-accent);
+    margin-top: 2px;
+    opacity: .85;
+}
+.wm-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.wm-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 14px;
+    font-size: 12px;
+    letter-spacing: 1px;
+    border: 1px solid var(--wm-line);
+    border-radius: 18px;
+    color: var(--wm-ink-soft);
+    background: transparent;
+    cursor: pointer;
+    transition: all var(--dur-shou) var(--ease-shou);
+    text-decoration: none;
+    font-family: inherit;
+}
+.wm-chip:hover {
+    border-color: var(--wm-accent);
+    color: var(--wm-accent);
+}
+.wm-chip.wm-chip-strong {
+    border-color: var(--wm-accent);
+    color: var(--wm-accent);
+}
+
+/* ---------- 7. 信印区（左侧） ---------- */
+.wm-seal-stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 520px;
+    position: relative;
+}
+.wm-seal-wrap {
+    position: relative;
+    width: 420px;
+    height: 640px;
+}
+@media (max-width: 1440px) { .wm-seal-wrap { width: 380px; height: 580px; } }
+@media (max-width: 1280px) { .wm-seal-wrap { width: 340px; height: 520px; } }
+@media (max-width: 1024px) {
+    .wm-seal-stage { min-height: 420px; }
+    .wm-seal-wrap { width: 290px; height: 440px; }
+}
+/* V4 现代落地灯 · 启灯后灯底地面光氛围延伸 */
+.wm-seal-stage::before {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 680px;
+    height: 140px;
+    background: radial-gradient(ellipse at 50% 20%, rgba(249,200,122,0.10) 0%, rgba(201,160,99,0.04) 40%, transparent 70%);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 1.2s var(--ease-qi);
+}
+[data-stage="UNSEALED"] .wm-seal-stage::before { opacity: 1; }
+[data-theme="light"] .wm-seal-stage::before {
+    background: radial-gradient(ellipse at 50% 20%, rgba(249,200,122,0.22) 0%, rgba(184,142,74,0.08) 40%, transparent 70%);
+}
+
+/* V4 · 启灯后整页环境暖色微叠加（戏剧光感） */
+[data-stage="UNSEALED"] body.wm-login-page::after {
+    opacity: 1;
+}
+body.wm-login-page::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(ellipse 60% 50% at 28% 45%, rgba(249,200,122,0.06) 0%, transparent 60%);
+    opacity: 0;
+    transition: opacity 1.6s var(--ease-qi);
+    z-index: 0;
+    mix-blend-mode: screen;
+}
+[data-theme="light"] body.wm-login-page::after {
+    background: radial-gradient(ellipse 60% 50% at 28% 45%, rgba(249,200,122,0.18) 0%, transparent 60%);
+    mix-blend-mode: multiply;
+}
+.wm-seal-wrap svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    display: block;
+}
+
+/* 邀约文字（段1） */
+.wm-seal-invite {
+    position: absolute;
+    bottom: -28px;
+    left: 50%;
+    transform: translateX(-50%) translateY(8px);
+    font-size: 12px;
+    letter-spacing: 4px;
+    color: var(--wm-accent);
+    opacity: 0;
+    pointer-events: none;
+    white-space: nowrap;
+    text-shadow: 0 0 12px var(--wm-glow);
+    transition: opacity 600ms var(--ease-qi), transform 600ms var(--ease-qi);
+}
+.wm-seal-invite.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* 铜铃铛 cursor（手柄） */
+.wm-seal-handle {
+    cursor: grab;
+    transition: filter var(--dur-shou) var(--ease-shou);
+    transform-box: fill-box;
+    transform-origin: center top;
+}
+.wm-seal-handle:active { cursor: grabbing; }
+.wm-seal-handle:hover  { filter: drop-shadow(0 0 8px var(--wm-glow-strong)); }
+
+/* 小黄铜垂珠闲置极弱摆动（熄灭态） */
+@keyframes wmBeadSway {
+    0%, 100% { transform: rotate(-0.6deg); }
+    50%      { transform: rotate(0.6deg); }
+}
+[data-stage="SEALED"] .wm-seal-handle {
+    animation: wmBeadSway 5.6s var(--ease-cheng) infinite;
+    transform-origin: 290px 220px;
+    transform-box: fill-box;
+}
+[data-stage="UNSEALED"] .wm-seal-handle {
+    animation: none;
+}
+
+/* V4 · 启灯后灯泡极弱呼吸（类似真实灯丝脉冲） */
+@keyframes wmBulbBreathe {
+    0%, 100% { opacity: 0.95; filter: brightness(1);    }
+    50%      { opacity: 1;    filter: brightness(1.06); }
+}
+[data-stage="UNSEALED"] [data-role="bulb"],
+[data-stage="UNSEALED"] [data-role="bulb-halo"] {
+    animation: wmBulbBreathe 5s var(--ease-cheng) infinite;
+}
+
+/* V4 · 可见光柱随呼吸极弱脉动 */
+@keyframes wmBeamBreathe {
+    0%, 100% { opacity: 0.85; }
+    50%      { opacity: 1;    }
+}
+[data-stage="UNSEALED"] [data-role="light-beam"] {
+    animation: wmBeamBreathe 5s var(--ease-cheng) infinite;
+}
+
+/* V4 · 浅色版启灯强化（宣纸底色下光效对比度大幅增强） */
+[data-theme="light"][data-stage="UNSEALED"] [data-role="light-beam"] {
+    filter: saturate(2.8) brightness(0.65) contrast(1.4) hue-rotate(-8deg);
+}
+[data-theme="light"][data-stage="UNSEALED"] [data-role="desk-pool"] {
+    filter: saturate(2.5) brightness(0.7) contrast(1.35);
+}
+[data-theme="light"][data-stage="UNSEALED"] [data-role="desk-pool-outer"] {
+    filter: saturate(2.3) brightness(0.72) contrast(1.3);
+}
+[data-theme="light"][data-stage="UNSEALED"] [data-role="glow"] {
+    filter: saturate(2.0) brightness(0.75) contrast(1.25);
+}
+[data-theme="light"][data-stage="UNSEALED"] [data-role="bulb-halo"] {
+    filter: saturate(2.2) brightness(0.78);
+}
+[data-theme="light"][data-stage="UNSEALED"] [data-role="shade-underlight"] {
+    filter: saturate(2.5) brightness(0.7);
+}
+/* 浅色版 shade-body-on 适配（浅色下金属罩受光时呈更暖的铜色） */
+[data-theme="light"] [data-role="shade-body-on"] {
+    filter: saturate(1.6) brightness(0.85);
+}
+
+/* 浅色版熄灭态：蒙层减弱（整体亮，不需要压那么暗） */
+[data-theme="light"] [data-role="shade-dim"] {
+    opacity: 0.2;
+}
+
+/* 中心落印印鉴（段4） */
+.wm-stamped-mark {
+    position: absolute;
+    top: 62%;
+    left: 50%;
+    width: 160px;
+    height: 160px;
+    transform: translate(-50%, -50%) scale(0.6);
+    opacity: 0;
+    pointer-events: none;
+    filter: drop-shadow(0 0 18px var(--wm-zhuni));
+}
+.wm-stamped-mark.show {
+    animation: wmStampedPulse 1.2s var(--ease-shou) forwards;
+}
+@keyframes wmStampedPulse {
+    0%   { opacity: 0;   transform: translate(-50%,-50%) scale(0.6); }
+    30%  { opacity: 0.9; transform: translate(-50%,-50%) scale(1.02);}
+    65%  { opacity: 0.85;transform: translate(-50%,-50%) scale(1.0); }
+    100% { opacity: 0;   transform: translate(-50%,-50%) scale(1.08);}
+}
+
+/* ---------- 8. 登录表单区（右侧卷轴） ---------- */
+.wm-form-stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    min-height: 520px;
+}
+.wm-form-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    color: var(--wm-ink-dim);
+    font-size: 13px;
+    letter-spacing: 3px;
+    opacity: .72;
+    transition: opacity var(--dur-qi) var(--ease-qi);
+}
+.wm-form-placeholder .ph-seal {
+    width: 78px;
+    height: 78px;
+    border: 1px dashed var(--wm-line-strong);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "SimSun",serif;
+    font-size: 32px;
+    color: var(--wm-accent);
+    opacity: .6;
+    position: relative;
+}
+.wm-form-placeholder .ph-seal::before {
+    content: "";
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 50px;
+    height: 14px;
+    background: linear-gradient(180deg, var(--wm-accent) 0%, transparent 100%);
+    opacity: .25;
+    clip-path: polygon(10% 100%, 90% 100%, 100% 50%, 80% 50%, 80% 0%, 60% 0%, 60% 50%, 40% 50%, 40% 0%, 20% 0%, 20% 50%, 0% 50%);
+}
+
+/* 卷轴容器（对应段5 · 卷轴展开） */
+.wm-scroll {
+    width: 100%;
+    max-width: 480px;
+    position: relative;
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transform: translateY(8px);
+    transition:
+        max-height var(--dur-qi) var(--ease-qi),
+        opacity var(--dur-qi) var(--ease-qi),
+        transform var(--dur-qi) var(--ease-qi);
+}
+[data-stage="UNSEALED"] .wm-scroll {
+    max-height: 820px;
+    opacity: 1;
+    transform: translateY(0);
+}
+[data-stage="UNSEALED"] .wm-form-placeholder {
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+}
+
+/* 卷轴顶底金轴 */
+.wm-scroll::before,
+.wm-scroll::after {
+    content: "";
+    position: absolute;
+    left: -10px;
+    right: -10px;
+    height: 4px;
+    background: linear-gradient(90deg, transparent 0%, var(--wm-accent) 20%, var(--wm-liujin-soft) 50%, var(--wm-accent) 80%, transparent 100%);
+    box-shadow: 0 0 8px var(--wm-glow);
+    border-radius: 2px;
+}
+.wm-scroll::before { top: 0; }
+.wm-scroll::after  { bottom: 0; }
+
+.wm-scroll-inner {
+    padding: 36px 40px;
+    background: var(--wm-card-bg);
+    border: 1px solid var(--wm-card-border);
+    border-radius: 6px;
+    box-shadow: var(--wm-shadow);
+    backdrop-filter: blur(10px);
+    position: relative;
+}
+.wm-scroll-inner::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(135deg, rgba(255,255,255,0.02) 0%, transparent 40%);
+    border-radius: 6px;
+}
+
+/* 表单标题 */
+.wm-form-title {
+    font-family: "SimSun",serif;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: 6px;
+    color: var(--wm-ink);
+    margin: 0 0 4px;
+}
+.wm-form-subtitle {
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--wm-accent);
+    margin-bottom: 20px;
+}
+.wm-form-accent {
+    display: block;
+    width: 48px;
+    height: 3px;
+    margin-bottom: 22px;
+    background: linear-gradient(90deg, var(--wm-primary) 0%, var(--wm-accent) 100%);
+    border-radius: 2px;
+}
+
+/* 字段错峰 stagger（注：父容器首个子元素是归印按钮，故 nth-child 从 2 起）*/
+.wm-field {
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 320ms var(--ease-qi), transform 320ms var(--ease-qi);
+}
+[data-stage="UNSEALED"] .wm-field {
+    opacity: 1;
+    transform: translateY(0);
+}
+[data-stage="UNSEALED"] .wm-field:nth-child(2) { transition-delay: 60ms; }
+[data-stage="UNSEALED"] .wm-field:nth-child(3) { transition-delay: 120ms; }
+[data-stage="UNSEALED"] .wm-field:nth-child(4) { transition-delay: 180ms; }
+[data-stage="UNSEALED"] .wm-field:nth-child(5) { transition-delay: 240ms; }
+[data-stage="UNSEALED"] .wm-field:nth-child(6) { transition-delay: 300ms; }
+[data-stage="UNSEALED"] .wm-field:nth-child(7) { transition-delay: 360ms; }
+[data-stage="UNSEALED"] .wm-field:nth-child(8) { transition-delay: 420ms; }
+
+/* ---------- 9. 输入字段 ---------- */
+.wm-input-group {
+    margin-bottom: 18px;
+    position: relative;
+}
+.wm-label {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--wm-ink-soft);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+.wm-input {
+    width: 100%;
+    height: 44px;
+    padding: 0 44px 0 40px;
+    border: 1px solid var(--wm-input-border);
+    border-radius: 3px;
+    background: var(--wm-input-bg);
+    color: var(--wm-input-text);
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: all var(--dur-shou) var(--ease-shou);
+    box-sizing: border-box;
+    letter-spacing: 1px;
+}
+.wm-input::placeholder {
+    color: var(--wm-ink-dim);
+    letter-spacing: 1px;
+}
+.wm-input:hover {
+    border-color: var(--wm-line-strong);
+}
+.wm-input:focus {
+    border-color: var(--wm-primary);
+    box-shadow: 0 0 0 3px rgba(184, 20, 26, 0.12);
+}
+/* 下划线聚焦动画 */
+.wm-input-group::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 2px;
+    background: linear-gradient(90deg, var(--wm-primary), var(--wm-accent));
+    border-radius: 1px;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform var(--dur-qi) var(--ease-qi);
+    pointer-events: none;
+}
+.wm-input-group.focused::after {
+    transform: scaleX(1);
+}
+.wm-input-icon {
+    position: absolute;
+    top: 34px;
+    left: 12px;
+    width: 20px;
+    height: 20px;
+    color: var(--wm-ink-soft);
+    pointer-events: none;
+}
+.wm-input-toggle {
+    position: absolute;
+    top: 34px;
+    right: 10px;
+    width: 26px;
+    height: 26px;
+    padding: 4px;
+    border: 0;
+    background: transparent;
+    color: var(--wm-ink-soft);
+    cursor: pointer;
+    border-radius: 3px;
+    transition: color var(--dur-shou) var(--ease-shou);
+}
+.wm-input-toggle:hover { color: var(--wm-accent); }
+
+.wm-field-err {
+    min-height: 16px;
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--wm-primary);
+    letter-spacing: 1px;
+    opacity: 0;
+    transition: opacity var(--dur-shou) var(--ease-shou);
+}
+.wm-field-err.show { opacity: 1; }
+
+.wm-capslock-tip {
+    position: absolute;
+    top: 34px;
+    right: 44px;
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: var(--wm-accent);
+    opacity: 0;
+    transition: opacity var(--dur-shou) var(--ease-shou);
+}
+.wm-capslock-tip.show { opacity: 1; }
+
+/* ---------- 10. 钤记确认（记住账号） + 忘密 ---------- */
+.wm-options-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 14px 0 18px;
+    font-size: 12px;
+    letter-spacing: 1px;
+}
+.wm-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--wm-ink-soft);
+    cursor: pointer;
+    user-select: none;
+}
+.wm-check input { position: absolute; opacity: 0; pointer-events: none; }
+.wm-check-box {
+    width: 16px;
+    height: 16px;
+    border: 1.5px solid var(--wm-line-strong);
+    border-radius: 2px;
+    background: transparent;
+    position: relative;
+    flex-shrink: 0;
+    transition: all var(--dur-shou) var(--ease-shou);
+}
+.wm-check input:checked + .wm-check-box {
+    background: var(--wm-primary);
+    border-color: var(--wm-primary);
+    box-shadow: 0 0 0 3px rgba(184,20,26,0.15);
+}
+.wm-check input:checked + .wm-check-box::after {
+    content: "灯";
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "SimSun",serif;
+    font-size: 9px;
+    color: #fff;
+    font-weight: 700;
+}
+.wm-check input:focus-visible + .wm-check-box {
+    outline: 2px solid var(--wm-accent);
+    outline-offset: 2px;
+}
+.wm-forgot {
+    color: var(--wm-daiqing-soft);
+    text-decoration: none;
+    transition: color var(--dur-shou) var(--ease-shou);
+}
+.wm-forgot:hover { color: var(--wm-primary); }
+
+/* ---------- 11. 登录按钮（主 CTA） ---------- */
+.wm-cta {
+    width: 100%;
+    height: 48px;
+    background: linear-gradient(180deg, var(--wm-primary) 0%, var(--wm-zhuni-deep) 100%);
+    color: #FFF9E8;
+    border: 1px solid var(--wm-accent);
+    border-radius: 3px;
+    font-family: "SimSun",serif;
+    font-size: 16px;
+    letter-spacing: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: all var(--dur-shou) var(--ease-shou);
+    box-shadow: 0 4px 14px rgba(184, 20, 26, 0.22), inset 0 0 0 1px rgba(255,255,255,0.08);
+}
+.wm-cta:hover {
+    background: linear-gradient(180deg, #C0151C 0%, #9A1118 100%);
+    border-width: 2px;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(184, 20, 26, 0.30);
+}
+.wm-cta:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 8px rgba(184, 20, 26, 0.18) inset;
+}
+.wm-cta[disabled] {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+.wm-cta-text {
+    position: relative;
+    z-index: 2;
+}
+.wm-cta-stamp {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 48px;
+    height: 48px;
+    background: radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 70%);
+    border-radius: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 1;
+}
+.wm-cta-stamp.pulse {
+    animation: wmCtaStamp 450ms var(--ease-cheng) forwards;
+}
+@keyframes wmCtaStamp {
+    0%   { transform: translate(-50%,-50%) scale(0);   opacity: 0;   }
+    30%  { transform: translate(-50%,-50%) scale(1.8); opacity: 0.9; }
+    100% { transform: translate(-50%,-50%) scale(2.8); opacity: 0;   }
+}
+.wm-cta-loader {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 1.5px solid rgba(255, 249, 232, 0.3);
+    border-top-color: var(--wm-accent);
+    border-radius: 50%;
+    animation: wmSpin 0.9s linear infinite;
+    margin-right: 10px;
+    vertical-align: -2px;
+}
+@keyframes wmSpin { to { transform: rotate(360deg); } }
+
+/* ---------- 12. 官方认证通道 ---------- */
+.wm-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 22px 0 14px;
+    color: var(--wm-ink-dim);
+    font-size: 11px;
+    letter-spacing: 3px;
+}
+.wm-divider::before,
+.wm-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--wm-line-strong), transparent);
+}
+.wm-official-channels {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+.wm-channel-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 12px 6px;
+    background: transparent;
+    border: 1px solid var(--wm-line-strong);
+    border-radius: 3px;
+    color: var(--wm-ink-soft);
+    font-size: 11px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all var(--dur-shou) var(--ease-shou);
+    font-family: inherit;
+}
+.wm-channel-btn:hover {
+    border-color: var(--wm-accent);
+    color: var(--wm-accent);
+    background: var(--wm-glow);
+    transform: translateY(-1px);
+}
+.wm-channel-icon {
+    width: 22px;
+    height: 22px;
+    color: var(--wm-accent);
+}
+
+/* ---------- 13. 角色快速登录（MVP 展示入口） ---------- */
+.wm-role-quick {
+    margin-top: 18px;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height var(--dur-qi) var(--ease-qi);
+}
+.wm-role-quick.expanded {
+    max-height: 320px;
+}
+.wm-role-quick-title {
+    font-size: 11px;
+    color: var(--wm-ink-dim);
+    letter-spacing: 3px;
+    margin: 6px 0 10px;
+    text-align: center;
+}
+.wm-role-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    max-height: 240px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+.wm-role-grid::-webkit-scrollbar { width: 4px; }
+.wm-role-grid::-webkit-scrollbar-thumb {
+    background: var(--wm-accent);
+    border-radius: 2px;
+}
+.wm-role-card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: var(--wm-input-bg);
+    border: 1px solid var(--wm-input-border);
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all var(--dur-shou) var(--ease-shou);
+    font-size: 12px;
+}
+.wm-role-card:hover,
+.wm-role-card:focus-visible {
+    border-color: var(--wm-accent);
+    background: var(--wm-glow);
+    outline: none;
+}
+.wm-role-card.selected {
+    border-color: var(--wm-primary);
+    background: rgba(184,20,26,0.10);
+    box-shadow: 0 0 0 2px rgba(184,20,26,0.18);
+}
+.wm-role-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+.wm-role-info {
+    flex: 1;
+    min-width: 0;
+}
+.wm-role-name {
+    font-weight: 700;
+    color: var(--wm-ink);
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.wm-role-label {
+    color: var(--wm-ink-soft);
+    font-size: 10px;
+    letter-spacing: 1px;
+    margin-top: 1px;
+}
+
+/* 展开/收起按钮 */
+.wm-toggle-role {
+    display: block;
+    width: 100%;
+    padding: 8px;
+    margin-top: 10px;
+    background: transparent;
+    border: 1px dashed var(--wm-line-strong);
+    border-radius: 3px;
+    color: var(--wm-ink-dim);
+    font-size: 11px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all var(--dur-shou) var(--ease-shou);
+    font-family: inherit;
+}
+.wm-toggle-role:hover {
+    color: var(--wm-accent);
+    border-color: var(--wm-accent);
+}
+
+/* ---------- 14. 归印按钮 ---------- */
+.wm-reseal-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: transparent;
+    border: 1px solid var(--wm-line);
+    color: var(--wm-ink-dim);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    transition: all var(--dur-shou) var(--ease-shou);
+    z-index: 5;
+    font-family: "SimSun",serif;
+}
+.wm-reseal-btn:hover {
+    border-color: var(--wm-accent);
+    color: var(--wm-accent);
+    transform: rotate(90deg);
+}
+
+/* ---------- 15. 底部合规与署名 ---------- */
+.wm-login-footer {
+    padding: 14px 40px 18px;
+    border-top: 1px solid var(--wm-line);
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: var(--wm-ink-dim);
+    background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.06) 100%);
+    text-align: center;
+    line-height: 1.6;
+}
+[data-theme="light"] .wm-login-footer {
+    background: linear-gradient(180deg, transparent 0%, rgba(184,142,74,0.05) 100%);
+}
+.wm-compliance {
+    margin-bottom: 4px;
+    color: var(--wm-daiqing-soft);
+}
+[data-theme="dark"] .wm-compliance {
+    color: #7A8594;
+}
+.wm-copyright {
+    font-size: 10px;
+    color: var(--wm-ink-dim);
+    letter-spacing: 1.2px;
+}
+.wm-copyright strong {
+    color: var(--wm-accent);
+    font-weight: 600;
+    margin-right: 6px;
+}
+
+/* ---------- 16. 段6 呼吸照映 + 水印 ---------- */
+.wm-watermark {
+    position: fixed;
+    bottom: 88px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: "SimSun",serif;
+    font-size: 96px;
+    font-weight: 800;
+    letter-spacing: 24px;
+    color: var(--wm-accent);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 1.2s var(--ease-qi);
+    z-index: 0;
+    text-shadow: 0 0 40px var(--wm-glow);
+    white-space: nowrap;
+}
+[data-stage="UNSEALED"] .wm-watermark {
+    opacity: 0.04;
+}
+[data-theme="light"][data-stage="UNSEALED"] .wm-watermark {
+    opacity: 0.06;
+    color: var(--wm-liujin-soft);
+}
+
+/* 呼吸光晕 */
+.wm-ambient-glow {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(ellipse at 50% 50%, var(--wm-glow-strong) 0%, transparent 60%);
+    opacity: 0;
+    transition: opacity 1s var(--ease-qi);
+    z-index: 0;
+    mix-blend-mode: screen;
+}
+[data-theme="light"] .wm-ambient-glow {
+    mix-blend-mode: multiply;
+    background: radial-gradient(ellipse at 50% 50%, var(--wm-glow-strong) 0%, transparent 55%);
+}
+[data-stage="UNSEALED"] .wm-ambient-glow {
+    animation: wmBreathe 8s var(--ease-cheng) infinite;
+}
+@keyframes wmBreathe {
+    0%, 100% { opacity: 0.35; }
+    50%      { opacity: 0.55; }
+}
+
+/* 段4 扩散波 */
+.wm-burst {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: transparent;
+    border: 2px solid var(--wm-accent);
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+    pointer-events: none;
+}
+.wm-burst.fire {
+    animation: wmBurst 700ms var(--ease-cheng) forwards;
+}
+@keyframes wmBurst {
+    0%   { transform: translate(-50%,-50%) scale(0);  opacity: 0.55; border-width: 2px; }
+    100% { transform: translate(-50%,-50%) scale(40); opacity: 0;    border-width: 0.5px;}
+}
+
+/* ---------- 17. 合规浮层（忘密） ---------- */
+.wm-modal-mask {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(6px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: wmFadeIn 240ms var(--ease-qi);
+}
+.wm-modal-mask.show { display: flex; }
+@keyframes wmFadeIn { from { opacity: 0; } to { opacity: 1; } }
+.wm-modal {
+    width: 460px;
+    max-width: 90%;
+    padding: 30px 32px;
+    background: var(--wm-card-bg);
+    border: 1px solid var(--wm-accent);
+    border-radius: 4px;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.55);
+    color: var(--wm-ink);
+    backdrop-filter: blur(10px);
+    position: relative;
+}
+.wm-modal h3 {
+    font-family: "SimSun",serif;
+    font-size: 20px;
+    letter-spacing: 4px;
+    margin: 0 0 12px;
+    color: var(--wm-primary);
+}
+.wm-modal p {
+    font-size: 13px;
+    line-height: 1.8;
+    margin: 0 0 10px;
+    color: var(--wm-ink-soft);
+    letter-spacing: 1px;
+}
+.wm-modal-steps {
+    margin: 14px 0;
+    padding: 0;
+    list-style: none;
+}
+.wm-modal-steps li {
+    padding: 8px 12px;
+    border-left: 2px solid var(--wm-accent);
+    margin-bottom: 8px;
+    font-size: 12px;
+    color: var(--wm-ink);
+    background: rgba(201,160,99,0.06);
+}
+.wm-modal-actions {
+    text-align: right;
+    margin-top: 18px;
+}
+.wm-btn-ghost {
+    padding: 8px 20px;
+    background: transparent;
+    border: 1px solid var(--wm-line-strong);
+    color: var(--wm-ink);
+    cursor: pointer;
+    border-radius: 3px;
+    letter-spacing: 2px;
+    font-size: 12px;
+    transition: all var(--dur-shou) var(--ease-shou);
+    font-family: inherit;
+}
+.wm-btn-ghost:hover {
+    border-color: var(--wm-accent);
+    color: var(--wm-accent);
+}
+
+/* ---------- 18. Toast ---------- */
+.wm-toast {
+    position: fixed;
+    top: 100px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-20px);
+    padding: 12px 28px;
+    background: var(--wm-card-bg);
+    border: 1px solid var(--wm-accent);
+    border-radius: 3px;
+    color: var(--wm-ink);
+    font-size: 13px;
+    letter-spacing: 1px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+    opacity: 0;
+    pointer-events: none;
+    transition: all 300ms var(--ease-qi);
+    z-index: 2000;
+    backdrop-filter: blur(8px);
+}
+.wm-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* ---------- 19. 无障碍降级（减弱动画） ---------- */
+@media (prefers-reduced-motion: reduce) {
+    .wm-ambient-glow,
+    [data-stage="SEALED"] .wm-seal-box-breathe,
+    .wm-cta-stamp,
+    .wm-stamped-mark,
+    .wm-burst {
+        animation: none !important;
+    }
+    .wm-scroll, .wm-field {
+        transition-duration: 100ms !important;
+    }
+}
+
+/* 高对比度模式 */
+@media (prefers-contrast: more) {
+    :root {
+        --wm-line: rgba(255,255,255,0.4);
+        --wm-line-strong: rgba(255,255,255,0.6);
+    }
+    .wm-input { border-width: 2px; }
+    .wm-cta { border-width: 2px; }
+}
+
+/* ---------- 20. 打印禁用 ---------- */
+@media print {
+    .wm-login-page * { animation: none !important; transition: none !important; }
+}
+
+/* ==================================================================
+   V5 · 资深设计师优化层（覆盖式追加；不破坏 V4）
+   目标：氛围底 / 桌面地平线 / 叙事负空间 / 表单卡深度 / 封印态升级
+   ================================================================== */
+
+/* V5-1 · 氛围底多层叠：墙面垂直渐变 + 地平线 + 细噪点 + 超大径向 vignette */
+[data-theme="dark"] body.wm-login-page {
+    background:
+        /* 桌面高光（底部 72px 受光带） */
+        linear-gradient(180deg, transparent 86%, rgba(201,160,99,0.06) 92%, rgba(201,160,99,0.03) 100%),
+        /* 上部墙面阴影 */
+        linear-gradient(180deg, rgba(0,0,0,0.35) 0%, transparent 28%),
+        /* 环境暖光斑 */
+        radial-gradient(ellipse at 28% 42%, rgba(201,160,99,0.06) 0%, transparent 55%),
+        /* 朱泥红微光 */
+        radial-gradient(ellipse at 72% 90%, rgba(184,20,26,0.035) 0%, transparent 50%),
+        /* 基底墨色 */
+        linear-gradient(180deg, #0B0F17 0%, #0A0D14 45%, #070A11 100%);
+}
+
+/* V5-2 · 桌面地平线（落地灯落在视觉桌面上；柔和金边 + 投影暗带） */
+.wm-login-root::before {
+    content: "";
+    position: fixed;
+    left: 0; right: 0;
+    bottom: 88px; /* 紧贴 footer 顶部 */
+    height: 1px;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(201,160,99,0.18) 20%,
+        rgba(249,200,122,0.32) 50%,
+        rgba(201,160,99,0.18) 80%,
+        transparent 100%);
+    pointer-events: none;
+    z-index: 1;
+}
+[data-theme="light"] .wm-login-root::before {
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(184,142,74,0.35) 20%,
+        rgba(138,100,60,0.55) 50%,
+        rgba(184,142,74,0.35) 80%,
+        transparent 100%);
+}
+
+/* V7 · 水印彻底收敛 · 避免与印章/灯穿帮 */
+.wm-watermark {
+    bottom: 96px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    font-size: 56px !important;
+    letter-spacing: 12px !important;
+    z-index: 0 !important;
+    white-space: nowrap;
+    max-width: 60vw;
+    overflow: hidden;
+    opacity: 0 !important;  /* V7 · 默认完全隐藏 */
+}
+@media (max-width: 1440px) {
+    .wm-watermark { font-size: 44px !important; letter-spacing: 10px !important; }
+}
+/* V7 · 启封后也仅以极淡方式回归（且只在 footer 之上 · 低 z-index） */
+[data-stage="UNSEALED"] .wm-watermark {
+    opacity: 0.025 !important;
+}
+
+/* V5-4 · 封印态指示卡升级（取消"印"小方块；改为大型邀请卡） */
+.wm-form-placeholder {
+    position: relative;
+    padding: 44px 48px;
+    min-width: 380px;
+    background:
+        linear-gradient(160deg, rgba(201,160,99,0.06) 0%, transparent 60%),
+        linear-gradient(180deg, rgba(20,25,35,0.55) 0%, rgba(15,18,28,0.35) 100%);
+    border: 1px solid rgba(201,160,99,0.18);
+    border-radius: 8px;
+    box-shadow:
+        0 20px 60px rgba(0,0,0,0.35),
+        0 0 0 1px rgba(201,160,99,0.06) inset;
+    backdrop-filter: blur(14px);
+    opacity: 1 !important;
+    gap: 14px !important;
+}
+[data-theme="light"] .wm-form-placeholder {
+    background:
+        linear-gradient(160deg, rgba(184,142,74,0.08) 0%, transparent 60%),
+        linear-gradient(180deg, rgba(255,250,240,0.72) 0%, rgba(245,240,228,0.55) 100%);
+    border-color: rgba(184,142,74,0.28);
+    box-shadow:
+        0 18px 52px rgba(60,40,20,0.12),
+        0 0 0 1px rgba(184,142,74,0.08) inset;
+}
+
+/* 封印态新提示布局 */
+.wm-form-placeholder .ph-seal {
+    width: 96px !important;
+    height: 96px !important;
+    font-size: 40px !important;
+    opacity: 0.85 !important;
+    background:
+        radial-gradient(circle at 50% 35%, rgba(249,200,122,0.15) 0%, transparent 65%);
+    border-color: var(--wm-accent) !important;
+    box-shadow: inset 0 0 12px rgba(201,160,99,0.18);
+    font-family: "SimSun","STSong",serif;
+    transition: all 600ms var(--ease-qi);
+}
+/* 封印态：卡片主标题 */
+.wm-form-placeholder .ph-title {
+    font-family: "SimSun","STSong",serif;
+    font-size: 24px;
+    letter-spacing: 12px;
+    color: var(--wm-ink);
+    margin-top: 8px;
+    font-weight: 700;
+}
+/* 封印态：小字提示 */
+.wm-form-placeholder .ph-subtitle {
+    font-size: 12px;
+    letter-spacing: 3px;
+    color: var(--wm-ink-dim);
+    opacity: 0.72;
+}
+
+/* V5-5 · 表单卡深度重做：双层描边 + 四角金饰 + 顶部高光 + 大投影 */
+.wm-scroll-inner {
+    padding: 40px 44px !important;
+    background:
+        linear-gradient(160deg, rgba(201,160,99,0.04) 0%, transparent 40%),
+        var(--wm-card-bg) !important;
+    border: 1px solid rgba(201,160,99,0.28) !important;
+    border-radius: 8px !important;
+    box-shadow:
+        0 32px 80px rgba(0,0,0,0.45),
+        0 12px 30px rgba(0,0,0,0.25),
+        inset 0 1px 0 rgba(255,255,255,0.06) !important;
+}
+[data-theme="light"] .wm-scroll-inner {
+    box-shadow:
+        0 32px 80px rgba(60,40,20,0.14),
+        0 12px 30px rgba(60,40,20,0.08),
+        inset 0 1px 0 rgba(255,255,255,0.7) !important;
+}
+/* 顶部反光高光线 */
+.wm-scroll-inner::after {
+    content: "";
+    position: absolute;
+    top: 0; left: 8%; right: 8%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(249,200,122,0.55) 50%, transparent 100%);
+    pointer-events: none;
+}
+/* 四角金饰 */
+.wm-scroll-inner > .wm-field:first-child::before,
+.wm-scroll-inner > .wm-field:first-child::after {
+    content: "";
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    border: 1px solid var(--wm-accent);
+    opacity: 0.55;
+    pointer-events: none;
+}
+.wm-scroll-inner > .wm-field:first-child::before {
+    top: 10px; left: 10px;
+    border-right: none;
+    border-bottom: none;
+}
+.wm-scroll-inner > .wm-field:first-child::after {
+    top: 10px; right: 10px;
+    border-left: none;
+    border-bottom: none;
+}
+
+/* V5-6 · 测试凭证便签（预填 admin/admin123 提示） */
+.wm-cred-hint {
+    margin: 6px 0 0;
+    padding: 10px 14px;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    color: var(--wm-accent);
+    background:
+        linear-gradient(180deg, rgba(201,160,99,0.08) 0%, rgba(201,160,99,0.04) 100%);
+    border: 1px dashed rgba(201,160,99,0.35);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    line-height: 1.6;
+}
+.wm-cred-hint .wm-cred-hint-badge {
+    flex: 0 0 auto;
+    padding: 2px 8px;
+    background: var(--wm-accent);
+    color: #2A1410;
+    font-family: "SimSun",serif;
+    font-weight: 700;
+    letter-spacing: 1px;
+    border-radius: 2px;
+    font-size: 10px;
+}
+.wm-cred-hint .wm-cred-hint-text {
+    flex: 1;
+    color: var(--wm-ink-soft);
+}
+.wm-cred-hint .wm-cred-hint-text code {
+    background: rgba(201,160,99,0.12);
+    color: var(--wm-accent);
+    padding: 1px 6px;
+    border-radius: 2px;
+    font-family: "SFMono-Regular","Consolas",monospace;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    margin: 0 2px;
+}
+[data-theme="light"] .wm-cred-hint {
+    background:
+        linear-gradient(180deg, rgba(184,142,74,0.1) 0%, rgba(184,142,74,0.05) 100%);
+    border-color: rgba(184,142,74,0.4);
+}
+[data-theme="light"] .wm-cred-hint .wm-cred-hint-text code {
+    background: rgba(184,142,74,0.18);
+    color: #8A6430;
+}
+
+/* V5-7 · 表单阶段垂直对齐灯具视觉中心 */
+@media (min-width: 1025px) {
+    .wm-form-stage { align-self: center; }
+    .wm-scroll { margin-top: -10px; }
+}
+
+/* V5-8 · 封印态启动倒计时的圈环 */
+.wm-autostart-ring {
+    position: absolute;
+    top: 0; right: -10px;
+    width: 34px; height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    opacity: 0.7;
+}
+.wm-autostart-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.wm-autostart-ring circle {
+    fill: none;
+    stroke: var(--wm-accent);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+}
+.wm-autostart-ring .ring-bg   { opacity: 0.15; }
+.wm-autostart-ring .ring-fill {
+    stroke-dasharray: 94;
+    stroke-dashoffset: 94;
+    animation: wmRingFill 3s linear forwards;
+}
+@keyframes wmRingFill {
+    to { stroke-dashoffset: 0; }
+}
+.wm-autostart-hint {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--wm-accent);
+    opacity: 0.7;
+    margin-top: 6px;
+}
+[data-stage="UNSEALED"] .wm-autostart-ring,
+[data-stage="UNSEALED"] .wm-autostart-hint {
+    display: none;
+}
+
+/* ==================================================================
+   V6 · 灯下验印（隐喻统一层）
+   ================================================================== */
+
+/* V7 · 桌上立体印章 · 光柱落点正中 · 抬到灯杆之上 */
+.wm-desk-stamp {
+    position: absolute;
+    /* 对齐灯 SVG 的 desk-pool (cx=270/420 ≈ 64%)
+       上沿对准灯罩下方光柱起点（约 38% 高度） */
+    left: 62%;
+    top: 50%;
+    width: 116px;
+    height: 164px;
+    transform: translate(-50%, 0);
+    pointer-events: none;
+    /* 关键：抬到灯杆之上（灯 SVG 内部不分层，整个 lamp host 被它覆盖） */
+    z-index: 5;
+    opacity: 0.96;
+    transition:
+        opacity 1.2s var(--ease-qi),
+        transform 1.2s var(--ease-shou);
+    filter: drop-shadow(0 6px 14px rgba(0,0,0,0.5));
+}
+@media (max-width: 1440px) { .wm-desk-stamp { width: 104px; height: 146px; top: 52%; } }
+@media (max-width: 1280px) { .wm-desk-stamp { width: 92px;  height: 130px; top: 54%; } }
+/* 封印态：印章暗沉，略缩 */
+[data-stage="SEALED"] .wm-desk-stamp {
+    opacity: 0.42;
+    transform: translate(-50%, 0) scale(0.94);
+    filter: drop-shadow(0 4px 10px rgba(0,0,0,0.6)) brightness(0.75);
+}
+/* 启封后：印章受光 → 朱身浮现 */
+[data-stage="UNSEALED"] .wm-desk-stamp .stamp-body-on {
+    animation: wmStampBodyReveal 1.6s var(--ease-qi) 700ms forwards;
+}
+[data-stage="UNSEALED"] .wm-desk-stamp .stamp-halo {
+    animation: wmStampHalo 2s var(--ease-qi) 500ms forwards;
+}
+[data-stage="UNSEALED"] .wm-desk-stamp .stamp-edge {
+    animation: wmStampEdge 1.2s var(--ease-qi) 900ms forwards;
+}
+/* V7 · 双重印面框（篆刻典型样式） */
+[data-stage="UNSEALED"] .wm-desk-stamp .stamp-frame-outer {
+    animation: wmStampChar 0.9s var(--ease-qi) 900ms forwards;
+}
+[data-stage="UNSEALED"] .wm-desk-stamp .stamp-frame-inner {
+    animation: wmStampChar 0.9s var(--ease-qi) 1050ms forwards;
+}
+/* V7 · 十字分隔（四格印鉴） */
+[data-stage="UNSEALED"] .wm-desk-stamp .stamp-divider-v,
+[data-stage="UNSEALED"] .wm-desk-stamp .stamp-divider-h {
+    animation: wmStampChar 0.6s var(--ease-qi) 1150ms forwards;
+}
+/* 四字逐字浮现 */
+[data-stage="UNSEALED"] .wm-desk-stamp .stamp-char:nth-child(1) {
+    animation: wmStampChar 0.8s var(--ease-qi) 1200ms forwards;
+}
+[data-stage="UNSEALED"] .wm-desk-stamp .stamp-char:nth-child(2) {
+    animation: wmStampChar 0.8s var(--ease-qi) 1380ms forwards;
+}
+[data-stage="UNSEALED"] .wm-desk-stamp .stamp-char:nth-child(3) {
+    animation: wmStampChar 0.8s var(--ease-qi) 1560ms forwards;
+}
+[data-stage="UNSEALED"] .wm-desk-stamp .stamp-char:nth-child(4) {
+    animation: wmStampChar 0.8s var(--ease-qi) 1740ms forwards;
+}
+
+@keyframes wmStampBodyReveal {
+    0%   { opacity: 0; }
+    100% { opacity: 1; }
+}
+@keyframes wmStampHalo {
+    0%   { opacity: 0; transform: scale(0.85); }
+    50%  { opacity: 0.9; }
+    100% { opacity: 0.7; transform: scale(1.05); }
+}
+@keyframes wmStampEdge {
+    0%   { opacity: 0.4; stroke-width: 0.6; }
+    50%  { opacity: 1; stroke-width: 1.2; }
+    100% { opacity: 0.85; stroke-width: 0.8; }
+}
+@keyframes wmStampChar {
+    0%   { opacity: 0; }
+    60%  { opacity: 1; }
+    100% { opacity: 0.95; }
+}
+
+/* 印章手柄与套环：启封后添加微呼吸 */
+@keyframes wmStampBreathe {
+    0%, 100% { filter: brightness(1); }
+    50%      { filter: brightness(1.08); }
+}
+[data-stage="UNSEALED"] .wm-desk-stamp .stamp-collar,
+[data-stage="UNSEALED"] .wm-desk-stamp .stamp-handle {
+    animation: wmStampBreathe 4.2s var(--ease-cheng) infinite 2000ms;
+}
+
+/* 浅色主题下印章对比度增强 */
+[data-theme="light"] .wm-desk-stamp .stamp-shadow {
+    fill: rgba(60,40,20,0.32);
+}
+[data-theme="light"][data-stage="UNSEALED"] .wm-desk-stamp {
+    filter: saturate(1.3) contrast(1.1);
+}
+
+/* V6-2 · 邀约文字：叙事 + 新词 */
+.wm-seal-invite {
+    letter-spacing: 5px !important;
+}
+
+/* V6-3 · 封印态四步叙事卡（替代原"印"大块） */
+.wm-form-placeholder .ph-steps {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 14px 0 6px;
+    padding: 12px 6px;
+    border-top: 1px solid rgba(201,160,99,0.12);
+    border-bottom: 1px solid rgba(201,160,99,0.12);
+}
+.wm-form-placeholder .ph-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+}
+.wm-form-placeholder .ph-step-no {
+    font-family: "SimSun","STSong",serif;
+    font-size: 16px;
+    font-weight: 900;
+    color: var(--wm-accent);
+    width: 28px;
+    height: 28px;
+    border: 1px solid rgba(201,160,99,0.35);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at 50% 35%, rgba(249,200,122,0.08), transparent 65%);
+}
+.wm-form-placeholder .ph-step-text {
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: var(--wm-ink-soft);
+    white-space: nowrap;
+}
+.wm-form-placeholder .ph-step-sep {
+    flex: 0 0 16px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(201,160,99,0.35), transparent);
+}
+
+/* V6-4 · 表单标题的「验印」徽标 */
+.wm-verify-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    margin-right: 8px;
+    vertical-align: middle;
+    filter: drop-shadow(0 0 4px rgba(184,20,26,0.45));
+}
+.wm-verify-badge svg { display: block; }
+.wm-form-subtitle {
+    display: inline-flex !important;
+    align-items: center !important;
+}
+
+/* V6-5 · 登录按钮 · 盖印动画（红圆印章钤落） */
+.wm-cta {
+    position: relative;
+    overflow: visible !important;
+}
+.wm-cta-seal-drop {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 72px;
+    height: 72px;
+    transform: translate(-50%, -50%) scale(2.4);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 5;
+}
+.wm-cta-seal-drop.active {
+    animation: wmSealDrop 1.2s var(--ease-shou) forwards;
+}
+@keyframes wmSealDrop {
+    0%   { opacity: 0; transform: translate(-50%, -180%) scale(2.8) rotate(-8deg); }
+    45%  { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+    55%  { opacity: 1; transform: translate(-50%, -50%) scale(1.1) rotate(0deg); }
+    70%  { opacity: 0.9; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1.4) rotate(0deg); }
+}
+
+/* V6-6 · 邀约文字扩展：SEALED 时贴底露出 */
+[data-stage="SEALED"] .wm-seal-invite {
+    opacity: 1 !important;
+    color: var(--wm-accent) !important;
+    font-weight: 600 !important;
+    font-size: 13px !important;
+    letter-spacing: 6px !important;
+    text-shadow: 0 0 16px rgba(201,160,99,0.55) !important;
+}
+[data-stage="UNSEALED"] .wm-seal-invite {
+    opacity: 0.72 !important;
+    color: var(--wm-accent) !important;
+    font-size: 12px !important;
+    letter-spacing: 5px !important;
+    text-shadow: 0 0 10px rgba(201,160,99,0.3) !important;
+}
+[data-theme="light"] .wm-seal-invite {
+    color: #8A6430 !important;
+    text-shadow: 0 0 8px rgba(184,142,74,0.3) !important;
+}
+
+/* V6-7 · 光柱击中印章 · 仅在 UNSEALED 时可见 */
+.wm-desk-stamp::before {
+    content: "";
+    position: absolute;
+    top: -80%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 52px;
+    height: 80%;
+    background: linear-gradient(180deg,
+        rgba(249,200,122,0) 0%,
+        rgba(249,200,122,0.08) 40%,
+        rgba(249,200,122,0.22) 85%,
+        rgba(249,200,122,0.3) 100%);
+    clip-path: polygon(40% 0, 60% 0, 100% 100%, 0% 100%);
+    filter: blur(2px);
+    opacity: 0;
+    transition: opacity 1.4s var(--ease-qi) 600ms;
+    pointer-events: none;
+}
+[data-stage="UNSEALED"] .wm-desk-stamp::before {
+    opacity: 0.85;
+}
+[data-theme="light"][data-stage="UNSEALED"] .wm-desk-stamp::before {
+    opacity: 0.5;
+}
+
+/* V6-8 · 响应式（窄屏下印章收缩） */
+@media (max-width: 1280px) {
+    .wm-desk-stamp { width: 62px; height: 86px; top: 64%; }
+}
+@media (max-width: 1024px) {
+    .wm-desk-stamp { display: none; }  /* 窄屏舍弃印章，避免拥挤 */
+}
+
+/* V6-9 · 降级：减弱动画 */
+@media (prefers-reduced-motion: reduce) {
+    .wm-desk-stamp .stamp-body-on,
+    .wm-desk-stamp .stamp-char,
+    .wm-desk-stamp .stamp-halo,
+    .wm-desk-stamp .stamp-edge {
+        animation: none !important;
+        opacity: 1 !important;
+    }
+    .wm-cta-seal-drop { animation-duration: 300ms !important; }
+}

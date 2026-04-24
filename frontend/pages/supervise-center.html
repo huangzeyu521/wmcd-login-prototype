@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>督办中心 - 皖美信用</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="../assets/css/shared.css?v=p3.1">
+<link rel="stylesheet" href="../assets/css/mvp.css?v=p3.1">
+<link rel="stylesheet" href="../assets/css/ai.css?v=p3.1">
+<script src="../assets/js/shared.js?v=p3.1"></script>
+<script src="../assets/js/interactions.js?v=p3.1"></script>
+<script src="../assets/js/mock-data.js?v=p3.1"></script>
+<script src="../assets/js/auth.js?v=p3.1"></script>
+<script src="../assets/js/tickets.js?v=p3.1"></script>
+<script src="../assets/js/phase2.js?v=p3.1"></script>
+<script src="../assets/js/components.js?v=p3.1"></script>
+<script src="../assets/js/ai-client.js?v=p3.1"></script>
+</head>
+<body class="bg-wm-bg">
+
+<script>if (!window.WM_AUTH.guard()) throw new Error('not logged in');</script>
+
+<div id="topbar-root"></div>
+<script>document.getElementById('topbar-root').outerHTML = WM_C.renderAuthTopbar('supervise');</script>
+
+<main class="px-8 py-6 max-w-[1600px] mx-auto">
+    <div class="flex items-center justify-between mb-5">
+        <div>
+            <h1 class="text-2xl font-bold text-wm-secondary">📣 督办中心</h1>
+            <div class="text-xs text-wm-gray3 mt-1">国资委 ↔ 国企 · 督办指令下发 · 处置跟踪 · 闭环管理</div>
+        </div>
+        <div class="flex items-center gap-2">
+            <button class="wm-btn wm-btn-primary wm-btn-sm" id="btn-new-sv">＋ 下发督办</button>
+        </div>
+    </div>
+
+    <!-- 统计 -->
+    <div class="grid grid-cols-5 gap-4 mb-5" id="stats"></div>
+
+    <!-- 主内容 两栏 -->
+    <div class="grid grid-cols-12 gap-5">
+        <!-- 左侧：视角切换 + 筛选 -->
+        <div class="col-span-3">
+            <div class="wm-card">
+                <div class="wm-card-header"><h3>视角</h3></div>
+                <div class="p-2">
+                    <div class="sb-item active" data-view="received"><span>📥</span><span class="flex-1">我接收的督办</span></div>
+                    <div class="sb-item" data-view="sent"><span>📤</span><span class="flex-1">我下发的督办</span></div>
+                </div>
+            </div>
+            <div class="wm-card mt-4">
+                <div class="wm-card-header"><h3>状态筛选</h3></div>
+                <div class="p-2">
+                    <div class="sb-item active" data-status="all"><span>📋</span><span class="flex-1">全部</span></div>
+                    <div class="sb-item" data-status="pending"><span>⏳</span><span class="flex-1">待接单</span></div>
+                    <div class="sb-item" data-status="handling"><span>🔧</span><span class="flex-1">处置中</span></div>
+                    <div class="sb-item" data-status="responded"><span>✓</span><span class="flex-1">已反馈</span></div>
+                    <div class="sb-item" data-status="closed"><span>📦</span><span class="flex-1">已关闭</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧：督办列表 -->
+        <div class="col-span-9">
+            <div class="wm-card">
+                <div class="p-4 space-y-3" id="sv-list">
+                    <div class="wm-empty"><div class="empty-icon">📣</div><div class="empty-title">加载中…</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div id="footer-root"></div>
+<script>document.getElementById('footer-root').outerHTML = renderFooter();</script>
+
+<script>
+const user = window.WM_AUTH.currentUser();
+WM_C.bindRoleSwitcher();
+
+let currentView = 'received';  // received | sent
+let currentStatus = 'all';
+
+function render() {
+    // 视角
+    const filter = { };
+    if (currentView === 'received') filter.receiver = user.id;
+    else filter.sender = user.id;
+    if (currentStatus !== 'all') filter.status = currentStatus;
+
+    const list = window.WM_P2.getSupervisions(filter);
+
+    // 统计
+    const allMine = window.WM_P2.getSupervisions({ receiver: user.id });
+    const allSent = window.WM_P2.getSupervisions({ sender: user.id });
+    const urgent = allMine.filter(s => s.status === 'pending' && s.level === 'red').length;
+    const handling = allMine.filter(s => s.status === 'handling').length;
+    const sent = allSent.length;
+    const closed = allMine.filter(s => s.status === 'closed').length;
+    const tot = allMine.length;
+
+    document.getElementById('stats').innerHTML = `
+        <div class="wm-kpi-mini" style="--kpi-color:#D64045;"><div class="kpi-label">🔴 紧急待办</div><div class="kpi-value">${urgent}</div><div class="kpi-trend">需立即接单</div></div>
+        <div class="wm-kpi-mini" style="--kpi-color:#E8A33D;"><div class="kpi-label">🔧 处置中</div><div class="kpi-value">${handling}</div><div class="kpi-trend">待反馈</div></div>
+        <div class="wm-kpi-mini" style="--kpi-color:#0F2A56;"><div class="kpi-label">📥 接收总数</div><div class="kpi-value">${tot}</div><div class="kpi-trend">本年度</div></div>
+        <div class="wm-kpi-mini" style="--kpi-color:#A8823E;"><div class="kpi-label">📤 下发总数</div><div class="kpi-value">${sent}</div><div class="kpi-trend">本年度</div></div>
+        <div class="wm-kpi-mini" style="--kpi-color:#2B9348;"><div class="kpi-label">✓ 已闭环</div><div class="kpi-value">${closed}</div><div class="kpi-trend">闭环率</div></div>
+    `;
+
+    // 列表
+    const listEl = document.getElementById('sv-list');
+    if (!list.length) {
+        listEl.innerHTML = `<div class="wm-empty"><div class="empty-icon">✨</div><div class="empty-title">暂无督办</div><div class="empty-desc">${currentView === 'received' ? '您没有待处理的督办' : '点击右上角"下发督办"'}</div></div>`;
+    } else {
+        listEl.innerHTML = list.map(sv => renderSvCard(sv)).join('');
+        // 绑定点击
+        listEl.querySelectorAll('[data-sv-id]').forEach(el => {
+            el.addEventListener('click', () => {
+                openSvDrawer(el.getAttribute('data-sv-id'));
+            });
+        });
+    }
+}
+
+function renderSvCard(sv) {
+    const sender = window.WM_STORE.getUser(sv.sender) || { shortName: sv.senderName };
+    const receiver = window.WM_STORE.getUser(sv.receiver) || { shortName: sv.receiverName };
+    const statusMap = {
+        pending: { label: '待接单', color: '#D64045' },
+        handling: { label: '处置中', color: '#E8A33D' },
+        responded: { label: '已反馈', color: '#2B9348' },
+        closed: { label: '已关闭', color: '#7A7A7A' },
+    };
+    const st = statusMap[sv.status] || statusMap.pending;
+    const overdue = sv.deadline && sv.deadline < Date.now() && (sv.status === 'pending' || sv.status === 'handling');
+
+    return `
+    <div class="wm-sv-card ${sv.level} ${sv.level === 'red' && sv.status === 'pending' ? 'urgent-badge' : ''}" data-sv-id="${sv.id}" style="cursor:pointer;">
+        <div class="flex items-start justify-between mb-2">
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="text-xs font-mono text-wm-gray3">${sv.id}</span>
+                    <span class="wm-status" style="background:${st.color}15;color:${st.color};border:1px solid ${st.color}55;">${st.label}</span>
+                    ${overdue ? '<span class="wm-priority wm-priority-urgent">超期</span>' : ''}
+                </div>
+                <div class="text-base font-bold text-wm-secondary">${WM_C.escapeHtml(sv.title)}</div>
+                <div class="text-xs text-wm-gray3 mt-1 line-clamp-2">${WM_C.escapeHtml((sv.content || '').slice(0, 120))}</div>
+            </div>
+        </div>
+        <div class="flex items-center justify-between mt-3 pt-3 border-t border-wm text-xs text-wm-gray3">
+            <div class="flex items-center gap-3">
+                <span>📤 ${sender.shortName}</span>
+                <span>→</span>
+                <span>📥 ${receiver.shortName}</span>
+                ${sv.enterpriseName ? `<span>🏢 ${sv.enterpriseName}</span>` : ''}
+            </div>
+            <div class="flex items-center gap-3">
+                <span>🕐 ${WM_C.fmtTime(sv.createdAt)}</span>
+                ${sv.deadline ? `<span>⏰ ${WM_C.fmtDate(sv.deadline)}</span>` : ''}
+                <span>💬 ${(sv.responses || []).length} 回复</span>
+            </div>
+        </div>
+    </div>`;
+}
+
+// 点击打开督办详情
+function openSvDrawer(svId) {
+    const sv = window.WM_P2.getSupervision(svId);
+    if (!sv) return;
+    const sender = window.WM_STORE.getUser(sv.sender) || { shortName: sv.senderName };
+    const receiver = window.WM_STORE.getUser(sv.receiver) || { shortName: sv.receiverName };
+    const isReceiver = user.id === sv.receiver;
+    const isSender = user.id === sv.sender;
+    const canAccept = isReceiver && sv.status === 'pending';
+    const canReport = isReceiver && sv.status === 'handling';
+    const canClose = isSender && (sv.status === 'responded' || sv.status === 'handling');
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'wm-drawer-backdrop';
+    backdrop.innerHTML = `
+        <div class="wm-drawer">
+            <div style="padding:20px;border-bottom:1px solid var(--color-border);position:sticky;top:0;background:white;z-index:1;">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-mono text-wm-gray3">${sv.id}</span>
+                        <span class="wm-status wm-status-${sv.level === 'red' ? 'rejected' : 'reviewing'}">${{red:'🔴 红色',orange:'🟠 橙色',yellow:'🟡 黄色'}[sv.level]}</span>
+                    </div>
+                    <div class="wm-modal-close" id="close-drawer">×</div>
+                </div>
+                <h2 class="text-lg font-bold text-wm-secondary">${WM_C.escapeHtml(sv.title)}</h2>
+                <div class="text-xs text-wm-gray3 mt-2">
+                    <span>📤 ${sender.shortName}（${sender.roleLabel || ''}）</span> →
+                    <span>📥 ${receiver.shortName}（${receiver.roleLabel || ''}）</span>
+                </div>
+            </div>
+            <div style="padding:20px;">
+                <!-- 督办内容 -->
+                <div class="wm-card-flat p-4 mb-4">
+                    <div class="text-xs text-wm-gray3 mb-2">督办内容</div>
+                    <div class="text-sm text-wm-secondary" style="white-space:pre-wrap;line-height:1.7;">${WM_C.escapeHtml(sv.content || '')}</div>
+                    <div class="flex items-center gap-4 mt-3 pt-3 border-t border-wm text-xs text-wm-gray3">
+                        <span>🕐 下发于 ${WM_C.fmtTime(sv.createdAt)}</span>
+                        ${sv.deadline ? `<span>⏰ 截止 ${WM_C.fmtDate(sv.deadline)}</span>` : ''}
+                    </div>
+                </div>
+
+                <!-- 关联单据 -->
+                ${sv.relatedTicketId ? `
+                    <div class="p-3 rounded mb-4" style="background:rgba(15,42,86,0.04);border-left:3px solid #0F2A56;">
+                        <div class="text-xs text-wm-gray3 mb-1">关联单据</div>
+                        <a href="ticket-detail.html?id=${sv.relatedTicketId}" class="text-sm font-semibold text-wm-primary hover:underline">${sv.relatedTicketId} →</a>
+                    </div>
+                ` : ''}
+
+                <!-- 响应时间线 -->
+                <div class="wm-card-flat p-4 mb-4">
+                    <div class="text-sm font-bold text-wm-secondary mb-3">📜 处置记录</div>
+                    ${(sv.responses || []).length ? `
+                        <div class="wm-timeline">
+                            ${sv.responses.map(r => {
+                                const u = window.WM_STORE.getUser(r.user) || { shortName: r.userName };
+                                const actionMap = { accept: '🤝 已接单', report: '📄 提交反馈', close: '📦 关闭督办', comment: '💬 评论' };
+                                return `<div class="tl-item ${r.type === 'close' ? 'completed' : r.type === 'accept' ? 'reviewing' : 'system'}">
+                                    <div class="tl-time">${WM_C.fmtTime(r.ts)}</div>
+                                    <div class="tl-action">${actionMap[r.type] || r.type}</div>
+                                    ${r.content ? `<div class="text-xs text-wm-gray mt-1" style="white-space:pre-wrap;">${WM_C.escapeHtml(r.content)}</div>` : ''}
+                                    <div class="tl-user">— ${u.shortName}</div>
+                                </div>`;
+                            }).join('')}
+                        </div>
+                    ` : '<div class="text-xs text-wm-gray3">暂无处置记录</div>'}
+                </div>
+
+                <!-- 操作区 -->
+                ${canAccept || canReport || canClose ? `
+                    <div class="wm-card-flat p-4">
+                        <div class="text-sm font-bold text-wm-secondary mb-3">${canAccept ? '接单处置' : canReport ? '提交反馈' : '关闭督办'}</div>
+                        ${(canAccept || canReport) ? `<textarea class="wm-textarea" id="sv-response" rows="3" placeholder="${canAccept ? '请简述接单意见（可选）' : '请填写处置进度与结果'}"></textarea>` : ''}
+                        <div class="flex justify-end gap-2 mt-3">
+                            ${canAccept ? '<button class="wm-btn wm-btn-primary wm-btn-sm" id="btn-accept">🤝 接单</button>' : ''}
+                            ${canReport ? '<button class="wm-btn wm-btn-primary wm-btn-sm" id="btn-report">📤 提交反馈</button>' : ''}
+                            ${canClose ? '<button class="wm-btn wm-btn-gold wm-btn-sm" id="btn-close-sv">📦 确认关闭</button>' : ''}
+                        </div>
+                    </div>
+                ` : ''}
+            </div>
+        </div>`;
+    document.body.appendChild(backdrop);
+
+    backdrop.addEventListener('click', (e) => { if (e.target === backdrop) backdrop.remove(); });
+    backdrop.querySelector('#close-drawer').addEventListener('click', () => backdrop.remove());
+
+    const respEl = backdrop.querySelector('#sv-response');
+    const btnAccept = backdrop.querySelector('#btn-accept');
+    const btnReport = backdrop.querySelector('#btn-report');
+    const btnClose = backdrop.querySelector('#btn-close-sv');
+    if (btnAccept) btnAccept.addEventListener('click', () => {
+        window.WM_P2.addSupervisionResponse(sv.id, user, 'accept', respEl.value || '已接单');
+        window.showToast('✓ 已接单', 'success');
+        backdrop.remove(); render();
+    });
+    if (btnReport) btnReport.addEventListener('click', () => {
+        if (!respEl.value.trim()) { window.showToast('请填写反馈内容', 'warn'); return; }
+        window.WM_P2.addSupervisionResponse(sv.id, user, 'report', respEl.value);
+        window.showToast('✓ 已提交反馈', 'success');
+        backdrop.remove(); render();
+    });
+    if (btnClose) btnClose.addEventListener('click', async () => {
+        const r = await WM_C.modal({
+            title: '确认关闭督办',
+            body: '<p class="text-sm mb-3">关闭后不可再处理，请确认处置结果达标。</p><textarea name="comment" class="wm-textarea" rows="3" placeholder="关闭意见（可选）"></textarea>',
+            confirmText: '确认关闭',
+        });
+        if (r && r.ok) {
+            window.WM_P2.addSupervisionResponse(sv.id, user, 'close', r.values.comment || '督办已闭环');
+            window.showToast('✓ 督办已闭环', 'success');
+            backdrop.remove(); render();
+        }
+    });
+}
+
+// ===== 下发督办 =====
+document.getElementById('btn-new-sv').addEventListener('click', async () => {
+    // 只有监管员可下发
+    if (!['sasac_chief', 'sasac_officer'].includes(user.role)) {
+        window.showToast('只有国资委监管员可下发督办', 'warn');
+        return;
+    }
+    const body = `
+        <div class="space-y-3">
+            <div>
+                <label class="wm-form-label required">督办标题</label>
+                <input type="text" name="title" class="wm-input" placeholder="如：【红色】XX集团债务兑付风险 · 立即处置">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="wm-form-label required">风险等级</label>
+                    <select name="level" class="wm-select">
+                        <option value="red">🔴 红色（立即）</option>
+                        <option value="orange">🟠 橙色（重点关注）</option>
+                        <option value="yellow">🟡 黄色（持续观察）</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="wm-form-label required">督办对象</label>
+                    <select name="receiver" class="wm-select">
+                        ${window.WM_USERS.filter(u => u.scope === 'own_enterprise').map(u =>
+                            `<option value="${u.id}">${u.shortName}（${u.roleLabel}）· ${u.enterpriseName}</option>`
+                        ).join('')}
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label class="wm-form-label required">督办内容</label>
+                <textarea name="content" class="wm-textarea" rows="5" placeholder="请详细说明督办事由、要求、期望反馈等"></textarea>
+            </div>
+            <div>
+                <label class="wm-form-label">处置截止时间</label>
+                <input type="date" name="deadline" class="wm-input">
+            </div>
+        </div>`;
+    const r = await WM_C.modal({ title: '📤 下发督办指令', body, confirmText: '✓ 下发' });
+    if (r && r.ok) {
+        if (!r.values.title || !r.values.content) {
+            window.showToast('请填写必填项', 'warn'); return;
+        }
+        const receiver = window.WM_STORE.getUser(r.values.receiver);
+        window.WM_P2.createSupervision({
+            title: r.values.title,
+            level: r.values.level,
+            sender: user.id, senderName: user.shortName,
+            receiver: receiver.id, receiverName: receiver.shortName,
+            enterpriseId: receiver.enterpriseId,
+            enterpriseName: receiver.enterpriseName,
+            content: r.values.content,
+            deadline: r.values.deadline ? new Date(r.values.deadline).getTime() : null,
+        });
+        window.showToast('✓ 督办已下发', 'success');
+        render();
+    }
+});
+
+// 视角切换
+document.querySelectorAll('[data-view]').forEach(el => {
+    el.addEventListener('click', () => {
+        document.querySelectorAll('[data-view]').forEach(e => e.classList.remove('active'));
+        el.classList.add('active');
+        currentView = el.getAttribute('data-view');
+        render();
+    });
+});
+
+// 状态筛选
+document.querySelectorAll('[data-status]').forEach(el => {
+    el.addEventListener('click', () => {
+        document.querySelectorAll('[data-status]').forEach(e => e.classList.remove('active'));
+        el.classList.add('active');
+        currentStatus = el.getAttribute('data-status');
+        render();
+    });
+});
+
+// 初始视角：监管员默认 sent，国企默认 received
+if (['sasac_chief', 'sasac_officer'].includes(user.role)) {
+    currentView = 'sent';
+    document.querySelector('[data-view="sent"]').click();
+}
+
+render();
+</script>
+</body>
+</html>

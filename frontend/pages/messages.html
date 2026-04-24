@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>消息中心 - 皖美信用</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="../assets/css/shared.css?v=p3.1">
+<link rel="stylesheet" href="../assets/css/mvp.css?v=p3.1">
+<link rel="stylesheet" href="../assets/css/ai.css?v=p3.1">
+<script src="../assets/js/shared.js?v=p3.1"></script>
+<script src="../assets/js/interactions.js?v=p3.1"></script>
+<script src="../assets/js/mock-data.js?v=p3.1"></script>
+<script src="../assets/js/auth.js?v=p3.1"></script>
+<script src="../assets/js/tickets.js?v=p3.1"></script>
+<script src="../assets/js/phase2.js?v=p3.1"></script>
+<script src="../assets/js/components.js?v=p3.1"></script>
+<script src="../assets/js/ai-client.js?v=p3.1"></script>
+</head>
+<body class="bg-wm-bg">
+
+<script>if (!window.WM_AUTH.guard()) throw new Error('not logged in');</script>
+
+<div id="topbar-root"></div>
+<script>document.getElementById('topbar-root').outerHTML = WM_C.renderAuthTopbar('messages');</script>
+
+<main class="px-8 py-6 max-w-[1400px] mx-auto">
+    <div class="flex items-center justify-between mb-5">
+        <div>
+            <h1 class="text-2xl font-bold text-wm-secondary">🔔 消息中心</h1>
+            <div class="text-xs text-wm-gray3 mt-1" id="msg-summary">加载中…</div>
+        </div>
+        <div class="flex items-center gap-2">
+            <button class="wm-btn wm-btn-ghost wm-btn-sm" id="btn-mark-all">全部标记已读</button>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-12 gap-5">
+        <!-- 左侧过滤 -->
+        <div class="col-span-3">
+            <div class="wm-card">
+                <div class="wm-card-header">
+                    <h3>分类筛选</h3>
+                </div>
+                <div class="p-2" id="filter-list"></div>
+            </div>
+        </div>
+
+        <!-- 消息列表 -->
+        <div class="col-span-9">
+            <div class="wm-card">
+                <div id="msg-list" style="max-height:720px;overflow-y:auto;">
+                    <div class="wm-empty"><div class="empty-icon">📬</div><div class="empty-title">加载中…</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div id="footer-root"></div>
+<script>document.getElementById('footer-root').outerHTML = renderFooter();</script>
+
+<script>
+const user = window.WM_AUTH.currentUser();
+WM_C.bindRoleSwitcher();
+
+let currentFilter = 'all';
+
+const TYPE_LABELS = {
+    all: { label: '📨 全部', bg: '#7A7A7A' },
+    approval: { label: '📋 审批通知', bg: '#E8A33D' },
+    approval_request: { label: '📋 待审批请求', bg: '#E8A33D' },
+    alert: { label: '🚨 风险预警', bg: '#D64045' },
+    supervise: { label: '📣 督办指令', bg: '#B8141A' },
+    progress: { label: '⏳ 进度更新', bg: '#0F2A56' },
+    daily_report: { label: '📄 报告推送', bg: '#A8823E' },
+};
+
+function render() {
+    const all = window.WM_STORE.getMessages(user.id);
+    const unreadTotal = all.filter(m => !m.read).length;
+
+    document.getElementById('msg-summary').textContent = `共 ${all.length} 条消息 · ${unreadTotal} 条未读`;
+
+    // 左侧过滤
+    const typeCount = {};
+    all.forEach(m => { typeCount[m.type] = (typeCount[m.type] || 0) + (m.read ? 0 : 1); });
+
+    const filterHtml = `
+        <div class="sb-item ${currentFilter === 'all' ? 'active' : ''}" data-filter="all">
+            <span>📨</span> <span class="flex-1">全部消息</span>
+            <span class="wm-badge-count" style="background:#7A7A7A;">${all.length}</span>
+        </div>
+        ${Object.keys(TYPE_LABELS).filter(k => k !== 'all').map(k => `
+            <div class="sb-item ${currentFilter === k ? 'active' : ''}" data-filter="${k}">
+                <span>${TYPE_LABELS[k].label.split(' ')[0]}</span>
+                <span class="flex-1">${TYPE_LABELS[k].label.split(' ')[1]}</span>
+                ${typeCount[k] ? `<span class="wm-badge-count" style="background:${TYPE_LABELS[k].bg};">${typeCount[k]}</span>` : ''}
+            </div>
+        `).join('')}
+    `;
+    document.getElementById('filter-list').innerHTML = filterHtml;
+
+    // 绑定过滤
+    document.querySelectorAll('[data-filter]').forEach(el => {
+        el.addEventListener('click', () => {
+            currentFilter = el.getAttribute('data-filter');
+            render();
+        });
+    });
+
+    // 消息列表
+    let list = currentFilter === 'all' ? all : all.filter(m => m.type === currentFilter);
+    const listEl = document.getElementById('msg-list');
+    if (!list.length) {
+        listEl.innerHTML = `<div class="wm-empty"><div class="empty-icon">📭</div><div class="empty-title">暂无消息</div></div>`;
+    } else {
+        listEl.innerHTML = list.map(m => WM_C.messageCard(m)).join('');
+        // 点击消息标记已读
+        listEl.querySelectorAll('.wm-msg').forEach(el => {
+            el.addEventListener('click', (e) => {
+                if (e.target.tagName === 'A') return; // 链接优先
+                const id = el.getAttribute('data-msg-id');
+                const tid = el.getAttribute('data-ticket-id');
+                window.WM_STORE.markMessageRead(id);
+                if (tid) {
+                    window.location.href = 'ticket-detail.html?id=' + tid;
+                } else {
+                    render();
+                }
+            });
+        });
+    }
+}
+
+document.getElementById('btn-mark-all').addEventListener('click', () => {
+    const all = window.WM_STORE.getMessages(user.id);
+    all.forEach(m => {
+        if (!m.read) { m.read = true; window.WM_STORE.saveMessage(m); }
+    });
+    window.showToast('所有消息已标记为已读', 'success');
+    render();
+});
+
+render();
+</script>
+</body>
+</html>

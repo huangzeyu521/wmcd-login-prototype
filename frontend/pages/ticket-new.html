@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>新建单据 - 皖美信用</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="../assets/css/shared.css?v=p3.1">
+<link rel="stylesheet" href="../assets/css/mvp.css?v=p3.1">
+<link rel="stylesheet" href="../assets/css/ai.css?v=p3.1">
+<script src="../assets/js/shared.js?v=p3.1"></script>
+<script src="../assets/js/interactions.js?v=p3.1"></script>
+<script src="../assets/js/mock-data.js?v=p3.1"></script>
+<script src="../assets/js/auth.js?v=p3.1"></script>
+<script src="../assets/js/tickets.js?v=p3.1"></script>
+<script src="../assets/js/phase2.js?v=p3.1"></script>
+<script src="../assets/js/components.js?v=p3.1"></script>
+<script src="../assets/js/ai-client.js?v=p3.1"></script>
+</head>
+<body class="bg-wm-bg">
+
+<script>if (!window.WM_AUTH.guard()) throw new Error('not logged in');</script>
+
+<div id="topbar-root"></div>
+<script>document.getElementById('topbar-root').outerHTML = WM_C.renderAuthTopbar('my-tickets');</script>
+
+<!-- 面包屑 -->
+<div class="bg-white border-b border-wm px-8 py-3">
+    <nav class="text-xs">
+        <a href="workbench.html" class="text-wm-secondary hover:text-wm-primary">🏠 工作台</a>
+        <span class="mx-2 text-wm-gray3">/</span>
+        <a href="my-tickets.html" class="text-wm-secondary hover:text-wm-primary">我的申请</a>
+        <span class="mx-2 text-wm-gray3">/</span>
+        <span class="text-wm-primary font-semibold" id="crumb-type">新建单据</span>
+    </nav>
+</div>
+
+<main class="px-8 py-6 max-w-[1100px] mx-auto">
+    <div class="wm-card">
+        <!-- 标题 -->
+        <div class="p-5 border-b border-wm bg-gradient-to-r" style="background:linear-gradient(135deg, rgba(184,20,26,0.03), rgba(201,160,99,0.02));">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-xl font-bold text-wm-secondary flex items-center gap-2" id="form-title">
+                        <span id="form-icon">📄</span> <span id="form-title-text">新建单据</span>
+                    </h1>
+                    <div class="text-xs text-wm-gray3 mt-1" id="form-subtitle">请填写以下信息</div>
+                </div>
+                <div class="flex gap-2">
+                    <button class="wm-btn wm-btn-ghost wm-btn-sm" onclick="history.back()">取消</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 步骤 -->
+        <div id="steps-container"></div>
+
+        <!-- 表单区 -->
+        <div class="p-6" id="form-container"></div>
+
+        <!-- 操作区 -->
+        <div class="px-6 py-4 border-t border-wm bg-wm-bg flex items-center justify-between">
+            <div class="text-xs text-wm-gray3" id="draft-hint">草稿自动保存 · 可随时关闭重新打开</div>
+            <div class="flex gap-2">
+                <button class="wm-btn wm-btn-ghost wm-btn-sm" id="btn-prev" style="display:none;">← 上一步</button>
+                <button class="wm-btn wm-btn-ghost wm-btn-sm" id="btn-draft">保存草稿</button>
+                <button class="wm-btn wm-btn-primary wm-btn-sm" id="btn-next">下一步 →</button>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div id="footer-root"></div>
+<script>document.getElementById('footer-root').outerHTML = renderFooter();</script>
+
+<script>
+const params = new URLSearchParams(location.search);
+const type = params.get('type') || 'financing';
+const meta = window.WM_TICKET_TYPES[type];
+const user = window.WM_AUTH.currentUser();
+WM_C.bindRoleSwitcher();
+
+if (!meta) {
+    document.getElementById('form-container').innerHTML = `<div class="wm-empty"><div class="empty-icon">❌</div><div class="empty-title">未知单据类型</div></div>`;
+    throw new Error('unknown type');
+}
+
+document.getElementById('form-icon').textContent = meta.icon;
+document.getElementById('form-title-text').textContent = '新建：' + meta.name;
+document.getElementById('crumb-type').textContent = meta.name;
+
+// ============== 表单配置（按类型）==============
+const CONFIG = {
+    credit: {
+        title: '信用评估申请',
+        subtitle: '发起一次完整的国资国企信用综合评估（6维度 × 30指标 × 120+三级指标）',
+        steps: ['评估基础', '数据上传', 'AI评估', '确认提交'],
+        fields: [
+            [ // Step 0
+                { name: 'period', label: '评估期间', required: true, type: 'select', options: ['2026-Q2（本季度）','2026-Q1','2025年度','触发式评估'] },
+                { name: 'scope', label: '评估范围', required: true, type: 'select', options: ['本企业（母公司）','合并报表（含子公司）','特定子公司'] },
+                { name: 'subsidiaries', label: '下属子公司（如合并）', type: 'textarea', help: '多个子公司用逗号分隔' },
+                { name: 'purpose', label: '评估目的', required: true, type: 'select', options: ['季度例行评估','融资前信用尽调','并购前信用尽调','监管检查','其他'] },
+                { name: 'remarks', label: '备注', type: 'textarea' },
+            ],
+            [ // Step 1
+                { name: 'financials', label: '财务数据（最近5年）', help: '系统将自动调用ERP/财务系统对接数据；如需手动上传请点击', type: 'placeholder', text: '📎 已自动对接皖能集团财务系统 · 获取2021-2025年数据' },
+                { name: 'compliance', label: '合规记录', type: 'placeholder', text: '📎 已自动对接企业信用信息公示系统 · 近3年无重大处罚' },
+                { name: 'operation', label: '经营数据', type: 'placeholder', text: '📎 已自动对接ERP系统 · 营收/市场/客户数据就绪' },
+            ],
+            [ // Step 2
+                { name: 'aiStart', label: 'AI综合评估', type: 'placeholder', text: '🤖 点击"下一步"启动 AI 评估引擎\n预计用时：15-30 秒\n将综合：远东信用产投评级方法论 · 垂直大模型 · 行业知识图谱' },
+            ],
+            [ // Step 3
+                { name: 'confirm', label: '确认并提交', type: 'placeholder', text: '✓ 所有数据已准备就绪\n✓ 评估引擎就绪\n✓ 生成结果将自动更新企业信用画像并推送至信用优化智能体' },
+            ]
+        ],
+    },
+    financing: {
+        title: '融资申请',
+        subtitle: '填写融资需求 → AI诊断 → 方案推荐 → 对接金融机构',
+        steps: ['融资需求', '担保与偏好', 'AI诊断', '方案选择', '确认提交'],
+        fields: [
+            [ // Step 0
+                { name: 'amount', label: '融资金额（万元）', required: true, type: 'number', placeholder: '如：200000' },
+                { name: 'term', label: '融资期限', required: true, type: 'select', options: ['< 9个月（超短融）','1-3 年（短期）','3-5 年（中期）','5-10 年（长期）','10 年以上'] },
+                { name: 'purpose', label: '融资用途', required: true, type: 'textarea', placeholder: '请详细说明资金用途、项目背景' },
+                { name: 'urgency', label: '紧急程度', required: true, type: 'select', options: ['常规（30日内）','较急（15日内）','紧急（7日内）'] },
+            ],
+            [ // Step 1
+                { name: 'collateral', label: '担保方式', required: true, type: 'select', options: ['集团信用担保','抵押担保（资产）','保证担保（第三方）','信用担保（无抵押）','混合担保'] },
+                { name: 'productPref', label: '融资产品偏好（可多选）', type: 'multiselect', options: ['银行流贷','项目贷款','公司债','科创债','绿色债券','REITs','ABS','供应链金融','其他'] },
+                { name: 'greenTag', label: '是否绿色项目', type: 'select', options: ['是','否','部分'] },
+                { name: 'rateExpect', label: '期望利率区间（%）', type: 'text', placeholder: '如：3.0 - 3.8' },
+            ],
+            [ // Step 2
+                { name: 'aiDiag', label: 'AI 智能诊断', type: 'placeholder', text: '🤖 点击"下一步"启动：\n✓ 融资结构穿透式分析\n✓ 债务期限缺口测算\n✓ 10+ 金融产品匹配\n✓ 综合成本最优化推荐' },
+            ],
+            [ // Step 3
+                { name: 'selectedPlan', label: '选择推荐方案', type: 'plan-picker' },
+            ],
+            [ // Step 4
+                { name: 'approver', label: '审批人', required: true, type: 'select', options: ['U006|赵建平（董事长）','U005|陈雪梅（风控合规总监）'] },
+                { name: 'confirm', label: '确认', type: 'placeholder', text: '✓ 单据将提交至审批人\n✓ 审批通过后自动推送至合作金融机构\n✓ 联动"信用优化智能体"实时更新' },
+            ]
+        ],
+    },
+    investment: {
+        title: '投资尽调申请',
+        subtitle: '发起 Multi-Agent 智能尽调（8 Agent 并行）',
+        steps: ['项目信息', '标的信息', 'Agent配置', '提交尽调'],
+        fields: [
+            [
+                { name: 'projectName', label: '项目名称', required: true, type: 'text', placeholder: '如：合肥XX储能科技 · 股权投资尽调' },
+                { name: 'industry', label: '所属行业', required: true, type: 'select', options: ['新能源汽车','新一代信息技术','新材料','通用人工智能','新能源/节能环保','高端装备','生命健康','量子科技','具身智能','其他'] },
+                { name: 'stage', label: '投资阶段', required: true, type: 'select', options: ['种子轮','天使轮','A轮','B轮及以后','Pre-IPO','并购','产业基金'] },
+                { name: 'investAmount', label: '拟投金额（万元）', required: true, type: 'number' },
+                { name: 'equityPct', label: '拟持股比例（%）', type: 'number' },
+            ],
+            [
+                { name: 'targetName', label: '标的企业全称', required: true, type: 'text' },
+                { name: 'targetCreditCode', label: '统一社会信用代码', type: 'text' },
+                { name: 'targetIntro', label: '标的简介', type: 'textarea' },
+                { name: 'targetFinancials', label: '标的财务概况', type: 'textarea', placeholder: '营收/净利润/资产/负债...' },
+            ],
+            [
+                { name: 'agents', label: '启用的 AI Agent（默认全选）', type: 'agent-picker' },
+            ],
+            [
+                { name: 'approver', label: '投委会', required: true, type: 'select', options: ['U006|董事长审批（超1亿）','U004|战略部审批（5000万以内）'] },
+                { name: 'confirm', label: '确认', type: 'placeholder', text: '✓ 8 大 Agent 将并行启动，预计 20-30 分钟完成\n✓ 自动生成：产业研究 / 标的画像 / 估值 / 尽调清单 / 风险矩阵 / 投委会材料' },
+            ]
+        ],
+    },
+    assets: {
+        title: '三资盘活项目',
+        subtitle: '数据资产化 → 模型评估 → 路径智选 → 模拟验证 → 资本落地',
+        steps: ['资产信息', '智能估值', '方案选择', '提交'],
+        fields: [
+            [
+                { name: 'assetType', label: '资产类型', required: true, type: 'select', options: ['不动产（厂房/土地/办公楼）','设备','股权','债权','无形资产（商标/专利）','特许经营权','数据资产','其他'] },
+                { name: 'assetName', label: '资产名称', required: true, type: 'text' },
+                { name: 'bookValue', label: '账面价值（万元）', required: true, type: 'number' },
+                { name: 'location', label: '所在地', type: 'text' },
+                { name: 'status', label: '资产现状', type: 'select', options: ['闲置','低效运营','正常运营','可出售','已进入处置'] },
+                { name: 'remarks', label: '备注', type: 'textarea' },
+            ],
+            [
+                { name: 'aiEval', label: 'AI 智能估值', type: 'placeholder', text: '🤖 启动收益法+市场法+成本法三法融合估值' },
+            ],
+            [
+                { name: 'selectedPlan', label: '选择盘活方案', type: 'asset-plan-picker' },
+            ],
+            [
+                { name: 'approver', label: '审批人', required: true, type: 'select', options: ['U006|赵建平（董事长）','U005|陈雪梅（风控合规）'] },
+                { name: 'confirm', label: '确认', type: 'placeholder', text: '✓ 方案将提交审批\n✓ 批准后联动"融资支持智能体"对接资本通道' },
+            ]
+        ],
+    },
+    ma: {
+        title: '并购项目立项',
+        subtitle: '标的智能匹配 → 方案设计 → 风险评估 → 投委会决策',
+        steps: ['并购意向', '标的筛选条件', '提交立项'],
+        fields: [
+            [
+                { name: 'maType', label: '并购类型', required: true, type: 'select', options: ['横向并购（同行业）','纵向并购（产业链补链）','混合并购','借壳上市','吸收合并','混合所有制改革','跨境并购','科创孵化型'] },
+                { name: 'purpose', label: '并购目的', required: true, type: 'textarea' },
+                { name: 'budget', label: '预算上限（万元）', required: true, type: 'number' },
+            ],
+            [
+                { name: 'industry', label: '目标行业', required: true, type: 'text', placeholder: '如：新能源汽车三电系统' },
+                { name: 'region', label: '目标区域', type: 'text' },
+                { name: 'sizeRange', label: '目标规模', type: 'select', options: ['小型（营收<1亿）','中型（1-10亿）','大型（10-50亿）','巨型（>50亿）'] },
+                { name: 'requirements', label: '其他要求', type: 'textarea', placeholder: '技术壁垒 / 核心资源 / 上市公司平台等' },
+            ],
+            [
+                { name: 'approver', label: '立项审批', required: true, type: 'select', options: ['U006|赵建平（董事长）','U001|李建国（省国资委 · 超大额）'] },
+                { name: 'confirm', label: '确认', type: 'placeholder', text: '✓ 立项批准后启动 Multi-Agent 标的匹配\n✓ 联动全球资本市场数据库' },
+            ]
+        ],
+    },
+    supply: {
+        title: '发布招标',
+        subtitle: '智能招投标 · AI 评标 · 异常检测',
+        steps: ['招标基础', '资质要求', '提交发布'],
+        fields: [
+            [
+                { name: 'projectName', label: '招标项目名称', required: true, type: 'text' },
+                { name: 'category', label: '采购品类', required: true, type: 'select', options: ['大宗物资','工程建设','专业服务','IT与软件','设备采购','运输物流','其他'] },
+                { name: 'budget', label: '预算金额（万元）', required: true, type: 'number' },
+                { name: 'biddingType', label: '招标方式', required: true, type: 'select', options: ['公开招标','邀请招标','竞争性谈判','单一来源'] },
+                { name: 'deadline', label: '投标截止时间', required: true, type: 'date' },
+            ],
+            [
+                { name: 'qualifications', label: '资质要求', required: true, type: 'textarea', placeholder: '如：一级资质 / 近3年同类项目业绩 / 注册资本要求...' },
+                { name: 'creditRequired', label: '信用评级要求', type: 'select', options: ['AAA','AA 及以上','A 及以上','无限制'] },
+                { name: 'blacklistCheck', label: '黑名单核查', type: 'select', options: ['严格（省级联禁）','常规','无'] },
+            ],
+            [
+                { name: 'approver', label: '内部审批', required: true, type: 'select', options: ['U005|陈雪梅（风控合规）','U006|赵建平（董事长）'] },
+                { name: 'confirm', label: '确认', type: 'placeholder', text: '✓ 招标将自动推送至省级标准化供应商库\n✓ 智能评标 + 异常检测（围标嫌疑 / 关联方 / 报价异常）自动启用' },
+            ]
+        ],
+    },
+    risk: {
+        title: '风险处置单',
+        subtitle: '处置方案制定 → 跨智能体协同 → 闭环跟踪',
+        steps: ['风险信息', '处置方案', '提交处置'],
+        fields: [
+            [
+                { name: 'riskEnterprise', label: '涉及企业', required: true, type: 'text', placeholder: '如：XX建工集团' },
+                { name: 'riskType', label: '风险类型', required: true, type: 'select', options: ['信用风险','债务风险','经营风险','投资风险','合规风险','舆情风险','重大事项'] },
+                { name: 'riskLevel', label: '风险等级', required: true, type: 'select', options: ['🔴 红色（立即处置）','🟠 橙色（重点关注）','🟡 黄色（持续观察）'] },
+                { name: 'riskDesc', label: '风险详情', required: true, type: 'textarea' },
+            ],
+            [
+                { name: 'plan', label: '处置方案', required: true, type: 'textarea', placeholder: '如：启动债务接续 / 资产盘活 / 信用修复 / 应急流动性...' },
+                { name: 'synergy', label: '跨智能体联动（可多选）', type: 'multiselect', options: ['融资支持（债务接续）','信用优化（信用修复）','三资盘活（应急盘活）','并购工具（重组）','供应链管理'] },
+                { name: 'deadline', label: '处置截止时间', required: true, type: 'date' },
+            ],
+            [
+                { name: 'approver', label: '审批人', required: true, type: 'select', options: ['U002|王丽华（省国资委监管员）','U006|赵建平（董事长）'] },
+                { name: 'confirm', label: '确认', type: 'placeholder', text: '✓ 处置方案将推送至审批\n✓ 联动智能体自动派发协同任务' },
+            ]
+        ],
+    },
+};
+
+const config = CONFIG[type];
+document.getElementById('form-title-text').textContent = config.title;
+document.getElementById('form-subtitle').textContent = config.subtitle;
+
+// 状态
+let currentStep = 0;
+let formData = {};
+
+// ========= 渲染步骤 =========
+function renderSteps() {
+    document.getElementById('steps-container').innerHTML = WM_C.wizardSteps(config.steps, currentStep);
+}
+
+// ========= 渲染表单 =========
+function renderForm() {
+    const fields = config.fields[currentStep] || [];
+    const html = fields.map(f => renderField(f)).join('');
+    document.getElementById('form-container').innerHTML = html;
+
+    // 附加交互
+    document.querySelectorAll('[data-field]').forEach(el => {
+        el.addEventListener('input', () => {
+            formData[el.getAttribute('data-field')] = el.value;
+        });
+        el.addEventListener('change', () => {
+            formData[el.getAttribute('data-field')] = el.value;
+        });
+    });
+
+    // 多选卡片
+    document.querySelectorAll('.multiselect-card').forEach(card => {
+        card.addEventListener('click', () => {
+            card.classList.toggle('selected');
+            const name = card.getAttribute('data-name');
+            const value = card.getAttribute('data-value');
+            formData[name] = formData[name] || [];
+            const idx = formData[name].indexOf(value);
+            if (idx >= 0) formData[name].splice(idx, 1); else formData[name].push(value);
+        });
+    });
+
+    // 方案选择器
+    document.querySelectorAll('.plan-option').forEach(card => {
+        card.addEventListener('click', () => {
+            document.querySelectorAll('.plan-option').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+            formData.selectedPlan = card.getAttribute('data-plan');
+        });
+    });
+}
+
+function renderField(f) {
+    if (f.type === 'placeholder') {
+        return `<div class="wm-form-group">
+            <label class="wm-form-label">${f.label}</label>
+            <div class="p-4 rounded" style="background:linear-gradient(135deg,rgba(201,160,99,0.06),rgba(15,42,86,0.03));border:1px dashed var(--color-accent);white-space:pre-line;color:var(--color-text-2);font-size:13px;">${f.text}</div>
+        </div>`;
+    }
+    if (f.type === 'textarea') {
+        return `<div class="wm-form-group">
+            <label class="wm-form-label ${f.required ? 'required' : ''}">${f.label}</label>
+            <textarea class="wm-textarea" data-field="${f.name}" placeholder="${f.placeholder || ''}" rows="3">${formData[f.name] || ''}</textarea>
+            ${f.help ? `<div class="wm-form-help">${f.help}</div>` : ''}
+        </div>`;
+    }
+    if (f.type === 'select') {
+        const opts = f.options.map(o => {
+            const val = o.includes('|') ? o.split('|')[0] : o;
+            const lbl = o.includes('|') ? o.split('|')[1] : o;
+            return `<option value="${val}">${lbl}</option>`;
+        }).join('');
+        return `<div class="wm-form-group">
+            <label class="wm-form-label ${f.required ? 'required' : ''}">${f.label}</label>
+            <select class="wm-select" data-field="${f.name}"><option value="">请选择…</option>${opts}</select>
+            ${f.help ? `<div class="wm-form-help">${f.help}</div>` : ''}
+        </div>`;
+    }
+    if (f.type === 'multiselect') {
+        return `<div class="wm-form-group">
+            <label class="wm-form-label ${f.required ? 'required' : ''}">${f.label}</label>
+            <div class="grid grid-cols-3 gap-2">
+                ${f.options.map(o => `
+                    <div class="wm-option-card multiselect-card" data-name="${f.name}" data-value="${o}">
+                        <span class="text-sm">${o}</span>
+                    </div>
+                `).join('')}
+            </div>
+        </div>`;
+    }
+    if (f.type === 'plan-picker') {
+        // 融资方案选择器
+        const plans = [
+            { id: 'A', title: '方案A · 公司债30亿 + 绿色债20亿', cost: '3.68%', pros: '综合成本最优 · 直接融资 · 绿色专项', badge: '推荐', color: '#C9A063' },
+            { id: 'B', title: '方案B · 科创债30亿 + 银行项贷20亿', cost: '3.95%', pros: '科技属性突出 · 银企组合', badge: '备选', color: '#0F2A56' },
+            { id: 'C', title: '方案C · REITs 25亿 + 中票25亿', cost: '4.12%', pros: '资产盘活联动 · 直接融资', badge: '备选', color: '#1F4A8A' },
+        ];
+        return `<div class="wm-form-group">
+            <label class="wm-form-label required">${f.label}</label>
+            <div class="space-y-3">
+                ${plans.map(p => `
+                    <div class="wm-option-card plan-option" data-plan="${p.id}" style="display:block;padding:16px;">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-bold text-wm-secondary">${p.title}</span>
+                            <span class="wm-badge" style="background:${p.color}20;color:${p.color};border:1px solid ${p.color}55;">${p.badge}</span>
+                        </div>
+                        <div class="flex items-center gap-6 text-xs text-wm-gray">
+                            <span>综合成本：<strong class="text-wm-primary font-mono">${p.cost}</strong></span>
+                            <span>${p.pros}</span>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>`;
+    }
+    if (f.type === 'asset-plan-picker') {
+        const plans = [
+            { id: 'REITS', title: '类REITs 证券化 · 首期18亿', cost: 'IRR 13.8%', pros: '符合政策 · 直接融资', badge: '推荐', color: '#C9A063' },
+            { id: 'ABS', title: 'ABS · 租金现金流15亿', cost: 'IRR 11.2%', pros: '成熟方案', badge: '备选', color: '#0F2A56' },
+            { id: 'HOLD', title: '持有型ABS（创新）11亿', cost: 'IRR 14.5%', pros: '2025市场首单', badge: '创新', color: '#B8141A' },
+        ];
+        return `<div class="wm-form-group">
+            <label class="wm-form-label required">${f.label}</label>
+            <div class="space-y-3">
+                ${plans.map(p => `
+                    <div class="wm-option-card plan-option" data-plan="${p.id}" style="display:block;padding:16px;">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-bold text-wm-secondary">${p.title}</span>
+                            <span class="wm-badge" style="background:${p.color}20;color:${p.color};border:1px solid ${p.color}55;">${p.badge}</span>
+                        </div>
+                        <div class="flex items-center gap-6 text-xs text-wm-gray">
+                            <span>回报：<strong class="text-wm-primary font-mono">${p.cost}</strong></span>
+                            <span>${p.pros}</span>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>`;
+    }
+    if (f.type === 'agent-picker') {
+        const agents = [
+            '① 产业研究Agent','② 标的画像Agent','③ 信用Agent','④ 估值Agent',
+            '⑤ 尽调Agent','⑥ 风险Agent','⑦ 投委会Agent','⑧ 监督Agent'
+        ];
+        return `<div class="wm-form-group">
+            <label class="wm-form-label">${f.label}</label>
+            <div class="grid grid-cols-2 gap-2">
+                ${agents.map(a => `
+                    <div class="wm-option-card multiselect-card selected" data-name="agents" data-value="${a}">
+                        <span class="text-sm">${a}</span>
+                    </div>
+                `).join('')}
+            </div>
+            <div class="wm-form-help mt-2">默认全选 · 取消即跳过该 Agent（不推荐）</div>
+        </div>`;
+    }
+    // 默认 input
+    const inputType = f.type === 'number' ? 'number' : (f.type === 'date' ? 'date' : 'text');
+    return `<div class="wm-form-group">
+        <label class="wm-form-label ${f.required ? 'required' : ''}">${f.label}</label>
+        <input type="${inputType}" class="wm-input" data-field="${f.name}" value="${formData[f.name] || ''}" placeholder="${f.placeholder || ''}">
+        ${f.help ? `<div class="wm-form-help">${f.help}</div>` : ''}
+    </div>`;
+}
+
+// ========= 步骤控制 =========
+function updateButtons() {
+    document.getElementById('btn-prev').style.display = currentStep > 0 ? '' : 'none';
+    document.getElementById('btn-next').textContent = currentStep < config.steps.length - 1 ? '下一步 →' : '🚀 提交申请';
+}
+
+document.getElementById('btn-prev').addEventListener('click', () => {
+    if (currentStep > 0) { currentStep--; renderSteps(); renderForm(); updateButtons(); }
+});
+
+document.getElementById('btn-next').addEventListener('click', async () => {
+    // 校验必填项
+    const fields = config.fields[currentStep] || [];
+    const missing = fields.filter(f => f.required && !formData[f.name]);
+    if (missing.length) {
+        window.showToast('请填写必填项：' + missing[0].label, 'warn');
+        return;
+    }
+
+    if (currentStep < config.steps.length - 1) {
+        // AI处理步骤模拟
+        const nextStepLabel = config.steps[currentStep + 1];
+        if (nextStepLabel.includes('AI') || nextStepLabel.includes('智能估值') || nextStepLabel.includes('诊断')) {
+            const btn = document.getElementById('btn-next');
+            btn.disabled = true;
+            btn.textContent = '🤖 AI 处理中…';
+            await new Promise(r => setTimeout(r, 1500));
+            btn.disabled = false;
+            window.showToast('AI 处理完成', 'success');
+        }
+        currentStep++;
+        renderSteps();
+        renderForm();
+        updateButtons();
+    } else {
+        // 提交
+        const result = window.WM_TICKETS.create(type, formData, {
+            title: formData.projectName || formData.assetName || formData.riskEnterprise || formData.targetName || `${user.enterpriseName || '省国资委'} · ${meta.name}`,
+            status: 'draft',
+            priority: formData.urgency && formData.urgency.includes('紧急') ? 'urgent' : 'normal',
+        });
+
+        // 如果指定了审批人，自动提交
+        if (formData.approver) {
+            window.WM_TICKETS.submit(result.id, formData.approver);
+            window.showToast('✓ 已提交审批，即将跳转到单据详情', 'success', 2000);
+        } else {
+            window.showToast('✓ 草稿已创建', 'success', 2000);
+        }
+
+        setTimeout(() => {
+            location.href = 'ticket-detail.html?id=' + result.id;
+        }, 1500);
+    }
+});
+
+document.getElementById('btn-draft').addEventListener('click', () => {
+    const result = window.WM_TICKETS.create(type, formData, {
+        title: formData.projectName || formData.assetName || formData.riskEnterprise || formData.targetName || `[草稿] ${meta.name}`,
+        status: 'draft',
+    });
+    window.showToast('✓ 草稿已保存', 'success');
+    setTimeout(() => location.href = 'ticket-detail.html?id=' + result.id, 1000);
+});
+
+renderSteps();
+renderForm();
+updateButtons();
+</script>
+</body>
+</html>

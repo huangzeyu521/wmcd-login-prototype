@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>单据详情 - 皖美信用</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="../assets/css/shared.css?v=p3.1">
+<link rel="stylesheet" href="../assets/css/mvp.css?v=p3.1">
+<link rel="stylesheet" href="../assets/css/ai.css?v=p3.1">
+<script src="../assets/js/shared.js?v=p3.1"></script>
+<script src="../assets/js/interactions.js?v=p3.1"></script>
+<script src="../assets/js/mock-data.js?v=p3.1"></script>
+<script src="../assets/js/auth.js?v=p3.1"></script>
+<script src="../assets/js/tickets.js?v=p3.1"></script>
+<script src="../assets/js/phase2.js?v=p3.1"></script>
+<script src="../assets/js/components.js?v=p3.1"></script>
+<script src="../assets/js/ai-client.js?v=p3.1"></script>
+</head>
+<body class="bg-wm-bg">
+
+<script>if (!window.WM_AUTH.guard()) throw new Error('not logged in');</script>
+
+<div id="topbar-root"></div>
+<script>document.getElementById('topbar-root').outerHTML = WM_C.renderAuthTopbar('my-tickets');</script>
+
+<!-- 面包屑 -->
+<div class="bg-white border-b border-wm px-8 py-3">
+    <nav class="text-xs">
+        <a href="workbench.html" class="text-wm-secondary hover:text-wm-primary">🏠 工作台</a>
+        <span class="mx-2 text-wm-gray3">/</span>
+        <a href="my-tickets.html" class="text-wm-secondary hover:text-wm-primary">我的申请</a>
+        <span class="mx-2 text-wm-gray3">/</span>
+        <span class="text-wm-primary font-semibold" id="crumb-id">单据详情</span>
+    </nav>
+</div>
+
+<main class="px-8 py-6 max-w-[1600px] mx-auto">
+    <div id="content">
+        <div class="wm-empty"><div class="empty-icon">⏳</div><div class="empty-title">加载中…</div></div>
+    </div>
+</main>
+
+<div id="footer-root"></div>
+<script>document.getElementById('footer-root').outerHTML = renderFooter();</script>
+
+<script>
+const params = new URLSearchParams(location.search);
+const ticketId = params.get('id');
+const user = window.WM_AUTH.currentUser();
+WM_C.bindRoleSwitcher();
+
+let ticket = ticketId ? window.WM_STORE.getTicket(ticketId) : null;
+
+if (!ticket) {
+    document.getElementById('content').innerHTML = `
+        <div class="wm-empty"><div class="empty-icon">❌</div><div class="empty-title">单据不存在</div><div class="empty-desc">单据可能已被删除或ID错误</div>
+        <a href="my-tickets.html" class="wm-btn wm-btn-primary wm-btn-sm mt-4 inline-block">返回列表</a></div>`;
+    throw new Error('not found');
+}
+
+document.getElementById('crumb-id').textContent = ticket.id;
+
+let meta = window.WM_TICKET_TYPES[ticket.type];
+let creator = window.WM_STORE.getUser(ticket.creator);
+let owner = window.WM_STORE.getUser(ticket.owner);
+
+// ============ 工具：根据金额+类型预览审批链 ============
+function previewChain() {
+    const info = window.WM_P2.getChainFor(ticket.type, ticket.amount || 0);
+    return info;
+}
+
+function renderApprovalChainNodes() {
+    const ch = ticket.approvalChain || [];
+    const idx = ticket.approvalStepIndex || 0;
+    const history = ticket.approvalHistory || [];
+
+    if (!ch.length) {
+        // 未提交时显示预览
+        const preview = previewChain();
+        return `
+            <div class="p-4 rounded" style="background:linear-gradient(135deg, rgba(201,160,99,0.05), rgba(15,42,86,0.02));border:1px dashed var(--color-accent);">
+                <div class="text-sm font-semibold text-wm-secondary mb-2">📋 审批链预览（提交后激活）</div>
+                <div class="text-xs text-wm-gray3 mb-3">适用规则：<strong class="text-wm-primary">${preview.name}</strong> · 金额：${ticket.amount ? WM_C.fmtMoney(ticket.amount) : '—'}</div>
+                <div class="wm-approval-chain">
+                    ${['起草', ...preview.chain.map((uid, i) => {
+                        const u = window.WM_STORE.getUser(uid);
+                        return `${i + 1}.${u ? u.shortName : uid}`;
+                    })].map((n, i) => `
+                        <div class="wm-chain-node ${i === 0 ? 'done' : ''}">
+                            <div class="cn-step">${i === 0 ? '已起草' : '待审 ' + i}</div>
+                            <div class="text-sm font-bold text-wm-secondary">${n}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>`;
+    }
+
+    // 已提交：构建可视化
+    const nodes = [];
+    // 第一个节点：起草
+    nodes.push({
+        label: '起草', user: creator, status: 'done',
+        step: '已起草', ts: ticket.createdAt,
+    });
+    // 中间节点：审批链
+    ch.forEach((uid, i) => {
+        const u = window.WM_STORE.getUser(uid);
+        const hist = history.find(h => h.stepIndex === i);
+        let status = 'wait';
+        if (hist && hist.result === 'approved') status = 'done';
+        else if (hist && hist.result === 'rejected') status = 'rejected';
+        else if (i === idx && ticket.status === 'reviewing') status = 'current';
+        else if (i < idx) status = 'done';
+        nodes.push({
+            label: `第${i + 1}级审批`, user: u, status,
+            step: status === 'done' ? '已通过' : status === 'current' ? '审批中' : status === 'rejected' ? '已驳回' : '等待',
+            ts: hist ? hist.ts : null,
+            comment: hist ? hist.comment : null,
+            signatureData: hist ? hist.signatureData : null,
+            role: u ? u.roleLabel : '—',
+        });
+    });
+    // 最后节点：完成
+    const statusDone = ['approved', 'executing', 'completed', 'archived'].includes(ticket.status) ? 'done' : 'wait';
+    nodes.push({ label: '终审完成', user: null, status: statusDone, step: statusDone === 'done' ? '已完成' : '等待' });
+
+    return `<div class="wm-approval-chain">${
+        nodes.map(n => `
+            <div class="wm-chain-node ${n.status}">
+                <div class="cn-step">${n.step}</div>
+                ${n.user ? `
+                    <div style="width:36px;height:36px;margin:4px auto;border-radius:50%;background:${n.user.avatarBg};color:white;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:13px;">${n.user.avatar}</div>
+                    <div class="text-sm font-bold text-wm-secondary">${n.user.shortName}</div>
+                    <div class="text-xs text-wm-gray3">${n.role || n.user.roleLabel || ''}</div>
+                ` : `<div class="text-wm-gray3 text-2xl py-1">·</div><div class="text-xs text-wm-gray3">${n.label}</div>`}
+                ${n.ts ? `<div class="text-xs text-wm-gray3 font-mono mt-1">${WM_C.fmtTime(n.ts)}</div>` : ''}
+                ${n.signatureData ? `<div class="mt-2 flex justify-center"><div class="wm-seal" style="width:50px;height:50px;font-size:11px;"><span>${n.signatureData.text || n.user.avatar}</span></div></div>` : ''}
+                ${n.comment ? `<div class="text-xs text-wm-gray italic mt-1 truncate" title="${WM_C.escapeHtml(n.comment)}">"${WM_C.escapeHtml(n.comment.slice(0, 20))}"</div>` : ''}
+            </div>
+        `).join('')
+    }</div>`;
+}
+
+// ============ 业务载荷渲染 ============
+function renderPayload(t) {
+    const p = t.payload || {};
+    if (t.type === 'financing') {
+        return `
+            <div class="grid grid-cols-2 gap-4">
+                <div><div class="text-xs text-wm-gray3">融资金额</div><div class="font-mono font-bold text-lg text-wm-primary">${WM_C.fmtMoney(p.amount)}</div></div>
+                <div><div class="text-xs text-wm-gray3">融资期限</div><div class="font-semibold">${p.term || '—'} ${p.termUnit || ''}</div></div>
+                <div class="col-span-2"><div class="text-xs text-wm-gray3">融资用途</div><div class="text-sm">${WM_C.escapeHtml(p.purpose || '—')}</div></div>
+                <div><div class="text-xs text-wm-gray3">担保方式</div><div class="text-sm">${WM_C.escapeHtml(p.collateral || '—')}</div></div>
+                <div><div class="text-xs text-wm-gray3">期望利率</div><div class="text-sm font-mono">${p.expectedRate || p.actualRate || '—'}</div></div>
+                <div class="col-span-2"><div class="text-xs text-wm-gray3">推荐产品</div><div class="text-sm">${(p.preferredProducts || []).map(x => `<span class="wm-tag mr-1">${x}</span>`).join('') || '—'}</div></div>
+            </div>`;
+    }
+    if (t.type === 'credit') {
+        return `<div class="grid grid-cols-3 gap-4">
+            <div><div class="text-xs text-wm-gray3">评估期间</div><div class="font-semibold">${p.period || '—'}</div></div>
+            <div><div class="text-xs text-wm-gray3">评估结果</div><div class="font-bold text-lg" style="color:#A8823E;">${p.result || '—'}</div></div>
+            <div><div class="text-xs text-wm-gray3">综合评分</div><div class="font-bold text-lg font-mono text-wm-primary">${p.score || '—'}${p.score ? ' /1000' : ''}</div></div>
+        </div>`;
+    }
+    if (t.type === 'investment') {
+        return `<div class="grid grid-cols-2 gap-4">
+            <div><div class="text-xs text-wm-gray3">标的名称</div><div class="font-bold text-wm-secondary">${WM_C.escapeHtml(p.targetName || '—')}</div></div>
+            <div><div class="text-xs text-wm-gray3">所属行业</div><div class="text-sm">${WM_C.escapeHtml(p.industry || '—')}</div></div>
+            <div><div class="text-xs text-wm-gray3">拟投金额</div><div class="font-mono font-bold text-wm-primary">${WM_C.fmtMoney(p.investAmount)}</div></div>
+            <div><div class="text-xs text-wm-gray3">拟持股比例</div><div class="font-mono">${p.equityPct || '—'}%</div></div>
+            <div class="col-span-2"><div class="text-xs text-wm-gray3">当前阶段</div><div class="font-semibold text-wm-secondary">${WM_C.escapeHtml(p.stage || '—')}</div></div>
+        </div>`;
+    }
+    if (t.type === 'assets') {
+        return `<div class="grid grid-cols-2 gap-4">
+            <div><div class="text-xs text-wm-gray3">资产类型</div><div class="font-semibold">${p.assetType || '—'}</div></div>
+            <div><div class="text-xs text-wm-gray3">AI 估值</div><div class="font-mono font-bold text-wm-primary">${WM_C.fmtMoney(p.appraisal)}</div></div>
+            <div class="col-span-2"><div class="text-xs text-wm-gray3">盘活方案</div><div class="font-semibold text-wm-secondary">${WM_C.escapeHtml(p.plan || '—')}</div></div>
+            <div><div class="text-xs text-wm-gray3">预期 IRR</div><div class="font-mono font-bold" style="color:#A8823E;">${p.expectedIRR || '—'}</div></div>
+        </div>`;
+    }
+    if (t.type === 'ma') {
+        return `<div class="grid grid-cols-2 gap-4">
+            <div><div class="text-xs text-wm-gray3">并购类型</div><div class="font-semibold">${p.maType || '—'}</div></div>
+            <div><div class="text-xs text-wm-gray3">候选标的数</div><div class="font-mono font-bold">${p.targetCandidates || '—'}</div></div>
+            <div class="col-span-2"><div class="text-xs text-wm-gray3">当前阶段</div><div class="font-semibold text-wm-secondary">${p.stage || '—'}</div></div>
+        </div>`;
+    }
+    if (t.type === 'supply') {
+        return `<div class="grid grid-cols-2 gap-4">
+            <div><div class="text-xs text-wm-gray3">采购品类</div><div class="font-semibold">${p.category || '—'}</div></div>
+            <div><div class="text-xs text-wm-gray3">投标人数</div><div class="font-mono font-bold">${p.biddersCount || '—'}</div></div>
+            <div class="col-span-2"><div class="text-xs text-wm-gray3">当前阶段</div><div class="font-semibold text-wm-secondary">${p.stage || '—'}</div></div>
+            ${p.anomaly ? `<div class="col-span-2 p-3 rounded" style="background:rgba(214,64,69,0.06);border-left:3px solid #D64045;"><span class="text-sm font-semibold text-red-600">🚨 ${p.anomaly}</span></div>` : ''}
+        </div>`;
+    }
+    if (t.type === 'risk') {
+        return `<div class="grid grid-cols-2 gap-4">
+            <div><div class="text-xs text-wm-gray3">风险等级</div><div class="font-semibold" style="color:#D64045;">${p.riskLevel === 'red' ? '🔴 红色' : p.riskLevel === 'orange' ? '🟠 橙色' : '🟡 黄色'}</div></div>
+            <div><div class="text-xs text-wm-gray3">风险类型</div><div class="font-semibold">${p.riskType || '—'}</div></div>
+            <div class="col-span-2"><div class="text-xs text-wm-gray3">触发原因</div><div class="text-sm">${WM_C.escapeHtml(p.trigger || '—')}</div></div>
+            <div class="col-span-2"><div class="text-xs text-wm-gray3">AI 建议</div><div class="text-sm p-3 rounded" style="background:rgba(184,20,26,0.04);">${WM_C.escapeHtml(p.suggestion || '—')}</div></div>
+        </div>`;
+    }
+    return '<pre class="text-xs bg-gray-50 p-3 rounded">' + JSON.stringify(p, null, 2) + '</pre>';
+}
+
+// ============ 评论/@ 渲染 ============
+function renderComments() {
+    const comments = (ticket.timeline || []).filter(t => t.type === 'comment');
+    if (!comments.length) {
+        return `<div class="wm-empty" style="padding:30px 10px;"><div class="empty-icon" style="font-size:32px;">💬</div><div class="empty-desc">还没有评论，来发表第一条吧</div></div>`;
+    }
+    return comments.map(c => {
+        const u = window.WM_STORE.getUser(c.user) || { shortName: c.userName, avatarBg: '#7A7A7A', avatar: '?', roleLabel: '' };
+        // 处理 @mention 高亮
+        let content = WM_C.escapeHtml(c.action);
+        (c.mentions || []).forEach(uid => {
+            const mu = window.WM_STORE.getUser(uid);
+            if (mu) {
+                const regex = new RegExp('@' + mu.shortName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+                content = content.replace(regex, `<span class="wm-mention">@${mu.shortName}</span>`);
+            }
+        });
+        return `
+            <div class="wm-comment">
+                <div class="cm-avatar" style="background:${u.avatarBg};">${u.avatar}</div>
+                <div class="cm-body">
+                    <div class="cm-meta">
+                        <span class="cm-author">${u.shortName}</span>
+                        <span class="cm-role">${u.roleLabel}</span>
+                        <span class="cm-ts">${WM_C.fmtTime(c.ts)}</span>
+                    </div>
+                    <div class="cm-content">${content}</div>
+                </div>
+            </div>`;
+    }).join('');
+}
+
+// ============ 附件渲染 ============
+function renderAttachments() {
+    const attachs = window.WM_P2.getAttachments(ticketId);
+    if (!attachs.length) {
+        return `
+            <div class="wm-upload-zone" id="upload-zone">
+                <div class="text-3xl mb-2">📎</div>
+                <div class="text-sm font-semibold text-wm-secondary mb-1">点击或拖拽上传附件</div>
+                <div class="text-xs text-wm-gray3">支持 PDF / Word / Excel / PPT / ZIP / 图片</div>
+                <input type="file" id="file-input" multiple style="display:none;">
+            </div>`;
+    }
+    return `
+        <div class="space-y-1">
+            ${attachs.map(a => {
+                const uploader = window.WM_STORE.getUser(a.uploadedBy);
+                const ext = (a.type || '').toLowerCase();
+                return `
+                <div class="wm-attach">
+                    <div class="wm-attach-icon ${ext}">${ext.toUpperCase().slice(0, 4)}</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="at-name">${WM_C.escapeHtml(a.name)}</div>
+                        <div class="at-meta">
+                            <span>${(a.size / 1024 / 1024).toFixed(2)} MB</span>
+                            <span>${uploader ? uploader.shortName : '—'}</span>
+                            <span>${WM_C.fmtTime(a.ts)}</span>
+                        </div>
+                    </div>
+                    <div class="at-actions">
+                        <a href="#" onclick="window.showToast('开始下载 ' + this.previousElementSibling || '文件','info');return false;">下载</a>
+                        ${a.uploadedBy === user.id ? `<a href="#" onclick="deleteAttachment('${a.id}');return false;" style="color:#D64045;">删除</a>` : ''}
+                    </div>
+                </div>`;
+            }).join('')}
+        </div>
+        <button class="wm-btn wm-btn-ghost wm-btn-sm mt-3" id="btn-upload-more">＋ 继续上传</button>
+        <input type="file" id="file-input" multiple style="display:none;">`;
+}
+
+window.deleteAttachment = function (id) {
+    window.WM_P2.deleteAttachment(id);
+    window.showToast('附件已删除', 'info');
+    reload();
+};
+
+// ============ 权限 ============
+function getPerms() {
+    const isCreator = user.id === ticket.creator;
+    const isOwner = user.id === ticket.owner;
+    const isApprover = user.id === ticket.currentApprover && ticket.status === 'reviewing';
+    return {
+        isCreator, isOwner, isApprover,
+        canEdit: isCreator && (ticket.status === 'draft' || ticket.status === 'rejected'),
+        canSubmit: isCreator && ticket.status === 'draft',
+        canApprove: isApprover,
+        canExecute: (isOwner || isCreator) && ticket.status === 'approved',
+        canComplete: (isOwner || isCreator) && ticket.status === 'executing',
+        canArchive: (isOwner || isCreator) && ticket.status === 'completed',
+    };
+}
+
+// ============ 操作按钮 ============
+function renderActionButtons() {
+    const perms = getPerms();
+    const btns = [];
+    if (perms.canEdit) btns.push(`<button class="wm-btn wm-btn-ghost wm-btn-sm" id="btn-edit">✏ 编辑</button>`);
+    if (perms.canSubmit) btns.push(`<button class="wm-btn wm-btn-primary wm-btn-sm" id="btn-submit">🚀 提交审批</button>`);
+    if (perms.canApprove) {
+        btns.push(`<button class="wm-btn wm-btn-ghost wm-btn-sm" id="btn-reject">✗ 驳回</button>`);
+        btns.push(`<button class="wm-btn wm-btn-primary wm-btn-sm" id="btn-approve">✓ 审批通过（签章）</button>`);
+    }
+    if (perms.canExecute) btns.push(`<button class="wm-btn wm-btn-primary wm-btn-sm" id="btn-execute">▶ 开始执行</button>`);
+    if (perms.canComplete) btns.push(`<button class="wm-btn wm-btn-primary wm-btn-sm" id="btn-complete">✓ 完成</button>`);
+    if (perms.canArchive) btns.push(`<button class="wm-btn wm-btn-gold wm-btn-sm" id="btn-archive">📦 归档</button>`);
+    if (!btns.length) btns.push(`<span class="text-xs text-wm-gray3">当前状态无可执行操作</span>`);
+    return btns.join('');
+}
+
+// ============ 主渲染 ============
+function reload() {
+    ticket = window.WM_STORE.getTicket(ticketId);
+    render();
+}
+
+function render() {
+    creator = window.WM_STORE.getUser(ticket.creator);
+    owner = window.WM_STORE.getUser(ticket.owner);
+    const approver = ticket.currentApprover ? window.WM_STORE.getUser(ticket.currentApprover) : null;
+
+    const approverName = approver ? approver.shortName : '—';
+    const creatorName = creator ? creator.shortName : '—';
+
+    document.getElementById('content').innerHTML = `
+<div class="grid grid-cols-12 gap-5">
+    <div class="col-span-8 space-y-5">
+        <!-- 标题卡 -->
+        <div class="wm-card">
+            <div class="p-5 border-b border-wm" style="background:linear-gradient(135deg,${meta.color}08,transparent);">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="text-3xl">${meta.icon}</span>
+                    <span class="text-xs font-mono text-wm-gray3">${ticket.id}</span>
+                    ${WM_C.statusBadge(ticket.status)}
+                    ${WM_C.priorityTag(ticket.priority)}
+                </div>
+                <h1 class="text-xl font-bold text-wm-secondary">${WM_C.escapeHtml(ticket.title)}</h1>
+                <div class="flex items-center gap-4 mt-2 text-xs text-wm-gray3">
+                    <span>👤 发起人：<strong class="text-wm-secondary">${creatorName}</strong></span>
+                    <span>🏢 ${ticket.enterpriseName || '省国资委'}</span>
+                    <span>🕐 创建于 ${WM_C.fmtTime(ticket.createdAt)}</span>
+                    ${ticket.deadline ? `<span>⏰ 截止 ${WM_C.fmtDate(ticket.deadline)}</span>` : ''}
+                    ${ticket.approvalChainName ? `<span>🔗 ${ticket.approvalChainName}</span>` : ''}
+                </div>
+            </div>
+
+            <div class="p-5">
+                <h3 class="text-sm font-bold text-wm-secondary mb-3 pb-2 border-b border-wm">业务信息</h3>
+                ${renderPayload(ticket)}
+            </div>
+
+            <div class="px-5 py-3 border-t border-wm bg-wm-bg flex items-center justify-between">
+                <div class="text-xs text-wm-gray3">
+                    ${ticket.status === 'reviewing' ? `等待 <strong class="text-wm-primary">${approverName}</strong> 审批（第 ${(ticket.approvalStepIndex || 0) + 1} / ${(ticket.approvalChain || []).length} 级）` :
+                      ticket.status === 'draft' ? '草稿状态，未提交审批' :
+                      ticket.status === 'approved' ? '✓ 全部审批通过，可进入执行' :
+                      ticket.status === 'executing' ? '执行中' :
+                      ticket.status === 'completed' ? '已完成，可归档' :
+                      ticket.status === 'archived' ? '已归档' :
+                      ticket.status === 'rejected' ? '已驳回，可修改后重交' : ''}
+                </div>
+                <div class="flex gap-2" id="action-buttons">${renderActionButtons()}</div>
+            </div>
+        </div>
+
+        <!-- 审批链可视化（多级） -->
+        <div class="wm-card">
+            <div class="wm-card-header">
+                <h3>🔗 审批链</h3>
+                <span class="text-xs text-wm-gray3">${ticket.approvalChainName || '未提交'}</span>
+            </div>
+            <div class="p-4">
+                ${renderApprovalChainNodes()}
+            </div>
+        </div>
+
+        <!-- AI 智能解读 -->
+        <div class="wm-card">
+            <div class="wm-card-header">
+                <h3>🧠 AI 智能解读（qwen3-max-preview）</h3>
+                <button class="wm-btn wm-btn-gold wm-btn-sm" id="btn-ai-analyze">🤖 启动 AI 解读</button>
+            </div>
+            <div class="p-3" id="ai-analyze-panel" style="min-height:80px;">
+                <div class="wm-empty"><div class="empty-icon">🧠</div><div class="empty-desc">点击右上角启动 AI 解读，获取专业分析、风险预判与执行建议</div></div>
+            </div>
+        </div>
+
+        <!-- 附件 -->
+        <div class="wm-card">
+            <div class="wm-card-header">
+                <h3>📎 附件</h3>
+                <span class="text-xs text-wm-gray3">${window.WM_P2.getAttachments(ticketId).length} 个文件</span>
+            </div>
+            <div class="p-4" id="attachments-area">${renderAttachments()}</div>
+        </div>
+
+        <!-- 评论 / 协作 -->
+        <div class="wm-card">
+            <div class="wm-card-header">
+                <h3>💬 协作与评论</h3>
+                <span class="text-xs text-wm-gray3">输入 @ 可提醒成员</span>
+            </div>
+            <div class="p-5">
+                <div class="relative">
+                    <textarea class="wm-textarea" id="comment-input" placeholder="添加评论或 @ 同事…" rows="2"></textarea>
+                    <div id="at-picker" class="wm-at-picker" style="display:none;"></div>
+                </div>
+                <div class="flex justify-between items-center mt-2">
+                    <div class="text-xs text-wm-gray3">Tips：输入 @ 触发成员选择 · Ctrl+Enter 快速发送</div>
+                    <button class="wm-btn wm-btn-primary wm-btn-sm" id="btn-comment">发布评论</button>
+                </div>
+                <div class="mt-4 pt-4 border-t border-wm" id="comment-list">
+                    ${renderComments()}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 右侧 -->
+    <div class="col-span-4 space-y-5">
+        <!-- 时间线 -->
+        <div class="wm-card">
+            <div class="wm-card-header">
+                <h3>📜 处理时间线</h3>
+            </div>
+            <div class="p-5" style="max-height:600px;overflow-y:auto;">
+                ${WM_C.timeline((ticket.timeline || []).filter(t => t.type !== 'comment'))}
+            </div>
+        </div>
+
+        <!-- 关联智能体 -->
+        <div class="wm-card">
+            <div class="wm-card-header"><h3>🧭 关联智能体</h3></div>
+            <div class="p-4 space-y-2">
+                <a href="agent-${meta.agent}.html" class="block p-3 rounded border border-wm hover:border-wm-2 transition" style="text-decoration:none;color:inherit;">
+                    <div class="flex items-center gap-3">
+                        <span style="font-size:22px;">${meta.icon}</span>
+                        <div class="flex-1">
+                            <div class="text-sm font-bold text-wm-secondary">${meta.name}智能体</div>
+                            <div class="text-xs text-wm-gray3">查看完整分析看板 →</div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- 当事人 -->
+        <div class="wm-card">
+            <div class="wm-card-header"><h3>👥 相关人员</h3></div>
+            <div class="p-4 space-y-3">
+                ${renderPerson('发起人', creator)}
+                ${owner && creator && owner.id !== creator.id ? renderPerson('执行人', owner) : ''}
+                ${approver ? renderPerson('当前审批人', approver) : ''}
+                ${(ticket.approvalChain || []).filter((uid, i) => i > (ticket.approvalStepIndex || 0)).map(uid => renderPerson('待审批', window.WM_STORE.getUser(uid))).join('')}
+            </div>
+        </div>
+    </div>
+</div>`;
+
+    bindActions();
+    bindAtPicker();
+    bindUpload();
+    bindAI();
+}
+
+function bindAI() {
+    const btn = document.getElementById('btn-ai-analyze');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+        const panel = document.getElementById('ai-analyze-panel');
+        // 根据单据类型选择合适的 AI 功能
+        const aiRoutes = {
+            'credit': { agent: 'credit', func: 'credit_explain', title: 'AI 评估解读' },
+            'financing': { agent: 'financing', func: 'financing_recommend', title: 'AI 融资方案' },
+            'investment': { agent: 'investment', func: 'investment_target_profile', title: 'AI 标的画像' },
+            'assets': { agent: 'assets', func: 'assets_activation_plan', title: 'AI 盘活方案' },
+            'ma': { agent: 'ma', func: 'ma_risk_assessment', title: 'AI 并购风险评估' },
+            'supply': { agent: 'supply', func: 'supply_supplier_eval', title: 'AI 供应商评价' },
+            'risk': { agent: 'risk', func: 'risk_disposal_plan', title: 'AI 处置方案' },
+        };
+        const route = aiRoutes[ticket.type] || aiRoutes.credit;
+
+        // 构造 context
+        const ctx = Object.assign({
+            enterprise_name: ticket.enterpriseName,
+            rating: 'AAA', score: 968,
+        }, ticket.payload);
+
+        // 业务字段映射
+        if (ticket.type === 'financing' && ticket.amount) ctx.amount = ticket.amount;
+
+        WMAI.call({
+            container: panel,
+            agent: route.agent,
+            function: route.func,
+            userId: user.id,
+            enterpriseId: ticket.enterpriseId,
+            title: route.title + '（qwen3-max-preview）',
+            context: ctx,
+        });
+    });
+}
+
+function renderPerson(label, u) {
+    if (!u) return '';
+    return `
+    <div class="flex items-center gap-3 p-2 rounded hover:bg-wm-bg">
+        <div style="width:36px;height:36px;border-radius:50%;background:${u.avatarBg};color:white;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">${u.avatar}</div>
+        <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2">
+                <span class="text-sm font-semibold text-wm-secondary">${u.shortName}</span>
+                <span class="text-xs text-wm-gray3">${u.roleLabel}</span>
+            </div>
+            <div class="text-xs text-wm-gray3 truncate">${label} · ${u.org}</div>
+        </div>
+    </div>`;
+}
+
+// ============ 操作绑定 ============
+async function act(action) {
+    try {
+        if (action === 'submit') {
+            const info = window.WM_P2.getChainFor(ticket.type, ticket.amount || 0);
+            if (!info.chain.length) {
+                window.showToast('未配置适用审批链', 'error');
+                return;
+            }
+            const chainNames = info.chain.map(uid => {
+                const u = window.WM_STORE.getUser(uid);
+                return u ? `${u.shortName}（${u.roleLabel}）` : uid;
+            }).join(' → ');
+            const body = `
+                <div class="p-3 rounded mb-3" style="background:linear-gradient(135deg, rgba(184,20,26,0.04), rgba(201,160,99,0.04));">
+                    <div class="text-xs text-wm-gray3 mb-1">适用审批链：</div>
+                    <div class="text-sm font-bold text-wm-primary">${info.name}</div>
+                    <div class="text-xs text-wm-secondary mt-2">${chainNames}</div>
+                </div>
+                <p class="text-xs text-wm-gray">提交后将依次流转至各级审批人，每一级审批通过方可进入下一级。</p>`;
+            const r = await WM_C.modal({ title: '提交多级审批', body, confirmText: '✓ 确认提交' });
+            if (r && r.ok) {
+                window.WM_P2_TICKETS.submitWithChain(ticketId);
+                window.showToast('✓ 已提交多级审批', 'success');
+            } else return;
+        } else if (action === 'approve') {
+            // 签章弹窗
+            const sig = window.WM_P2.getSignature(user.id) || { style: 'seal', text: user.shortName };
+            const body = `
+                <p class="text-sm mb-3">请填写审批意见：</p>
+                <textarea name="comment" class="wm-textarea" rows="3" placeholder="同意…">同意</textarea>
+                <div class="mt-4">
+                    <div class="text-sm font-semibold mb-2">🎯 电子签章预览</div>
+                    <div class="flex items-center gap-6 p-4 rounded" style="background:linear-gradient(135deg, rgba(201,160,99,0.06), rgba(184,20,26,0.03));">
+                        ${sig.style === 'seal' ? `
+                            <div class="wm-seal"><span>${sig.text}</span></div>
+                        ` : `<div class="wm-signature">${sig.text}</div>`}
+                        <div class="flex-1 text-xs text-wm-gray">
+                            <div>签章人：<strong>${user.shortName}</strong></div>
+                            <div>职务：${user.roleLabel}</div>
+                            <div>机构：${user.org}</div>
+                            <div>时间：${new Date().toLocaleString('zh-CN')}</div>
+                        </div>
+                    </div>
+                </div>`;
+            const r = await WM_C.modal({ title: '✓ 审批通过（含电子签章）', body, confirmText: '✓ 确认签章' });
+            if (r && r.ok) {
+                window.WM_P2_TICKETS.approveMultiLevel(ticketId, r.values.comment, sig);
+                window.showToast('✓ 审批通过，已签章', 'success');
+            } else return;
+        } else if (action === 'reject') {
+            const body = `<p class="text-sm mb-3">请填写驳回理由（必填）：</p><textarea name="comment" class="wm-textarea" rows="3" placeholder="具体原因..."></textarea>`;
+            const r = await WM_C.modal({ title: '✗ 审批驳回', body, confirmText: '✗ 驳回' });
+            if (r && r.ok && r.values.comment) {
+                window.WM_P2_TICKETS.rejectMultiLevel(ticketId, r.values.comment);
+                window.showToast('已驳回', 'warn');
+            } else { window.showToast('请填写驳回理由', 'warn'); return; }
+        } else if (action === 'execute') {
+            window.WM_TICKETS.execute(ticketId); window.showToast('✓ 开始执行', 'success');
+        } else if (action === 'complete') {
+            const body = `<p class="text-sm mb-3">请填写完成说明：</p><textarea name="comment" class="wm-textarea" rows="3" placeholder="如：银行放款已到账..."></textarea>`;
+            const r = await WM_C.modal({ title: '✓ 标记完成', body, confirmText: '完成' });
+            if (r && r.ok) { window.WM_TICKETS.complete(ticketId, r.values.comment); window.showToast('✓ 已完成', 'success'); } else return;
+        } else if (action === 'archive') {
+            window.WM_TICKETS.archive(ticketId); window.showToast('✓ 已归档', 'success');
+        }
+        setTimeout(reload, 600);
+    } catch (e) { window.showToast('操作失败：' + e.message, 'error'); }
+}
+
+function bindActions() {
+    const actions = [['btn-submit', 'submit'], ['btn-approve', 'approve'], ['btn-reject', 'reject'],
+                     ['btn-execute', 'execute'], ['btn-complete', 'complete'], ['btn-archive', 'archive']];
+    actions.forEach(([id, a]) => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('click', () => act(a));
+    });
+    const btnEdit = document.getElementById('btn-edit');
+    if (btnEdit) btnEdit.addEventListener('click', () => {
+        location.href = 'ticket-new.html?type=' + ticket.type + '&id=' + ticket.id;
+    });
+
+    // 评论
+    document.getElementById('btn-comment').addEventListener('click', () => {
+        const input = document.getElementById('comment-input');
+        const text = input.value.trim();
+        if (!text) { window.showToast('请输入评论内容', 'warn'); return; }
+
+        // 提取 @users
+        const mentions = [];
+        const mentionMatches = text.match(/@(\S+?)(?=[\s\p{P}]|$)/gu) || [];
+        mentionMatches.forEach(m => {
+            const name = m.slice(1);
+            const u = window.WM_USERS.find(u => u.shortName === name || u.name === name);
+            if (u && mentions.indexOf(u.id) < 0) mentions.push(u.id);
+        });
+
+        window.WM_P2_TICKETS.addComment(ticketId, text, mentions);
+        window.showToast(mentions.length ? `✓ 已发布，提醒 ${mentions.length} 人` : '✓ 已发布', 'success');
+        input.value = '';
+        setTimeout(reload, 300);
+    });
+    // Ctrl+Enter 发布
+    document.getElementById('comment-input').addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            document.getElementById('btn-comment').click();
+        }
+    });
+}
+
+// ============ @选择器 ============
+function bindAtPicker() {
+    const input = document.getElementById('comment-input');
+    const picker = document.getElementById('at-picker');
+    if (!input || !picker) return;
+
+    let atIndex = -1;
+
+    input.addEventListener('input', () => {
+        const val = input.value;
+        const pos = input.selectionStart;
+        // 查找最后一个 @ 符号位置
+        const atPos = val.lastIndexOf('@', pos - 1);
+        if (atPos >= 0 && (atPos === 0 || /\s/.test(val[atPos - 1]))) {
+            const keyword = val.slice(atPos + 1, pos);
+            if (/\s/.test(keyword)) { picker.style.display = 'none'; return; }
+            atIndex = atPos;
+
+            const users = window.WM_USERS.filter(u =>
+                !keyword || u.shortName.includes(keyword) || u.name.includes(keyword) || u.roleLabel.includes(keyword)
+            );
+            picker.innerHTML = users.map((u, i) => `
+                <div class="wm-at-item ${i === 0 ? 'highlight' : ''}" data-name="${u.shortName}">
+                    <div class="ai-avatar" style="background:${u.avatarBg};">${u.avatar}</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-semibold text-wm-secondary">${u.shortName}</div>
+                        <div class="text-xs text-wm-gray3">${u.roleLabel} · ${u.org}</div>
+                    </div>
+                </div>
+            `).join('');
+            picker.style.display = users.length ? 'block' : 'none';
+            picker.style.top = (input.offsetHeight + 4) + 'px';
+            picker.style.left = '0';
+
+            picker.querySelectorAll('.wm-at-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const name = item.getAttribute('data-name');
+                    input.value = val.slice(0, atPos) + '@' + name + ' ' + val.slice(pos);
+                    picker.style.display = 'none';
+                    input.focus();
+                });
+            });
+        } else {
+            picker.style.display = 'none';
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!input.contains(e.target) && !picker.contains(e.target)) {
+            picker.style.display = 'none';
+        }
+    });
+}
+
+// ============ 附件上传 ============
+function bindUpload() {
+    const zone = document.getElementById('upload-zone');
+    const fileInput = document.getElementById('file-input');
+    const btnMore = document.getElementById('btn-upload-more');
+
+    if (btnMore) btnMore.addEventListener('click', () => fileInput.click());
+
+    if (zone) {
+        zone.addEventListener('click', () => fileInput.click());
+        zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('dragover'); });
+        zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+        zone.addEventListener('drop', (e) => {
+            e.preventDefault(); zone.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+    }
+
+    if (fileInput) {
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+    }
+}
+
+function handleFiles(files) {
+    if (!files || !files.length) return;
+    let count = 0;
+    for (const f of files) {
+        window.WM_P2.addAttachment(ticketId, f);
+        count++;
+    }
+    window.showToast(`✓ 已上传 ${count} 个文件`, 'success');
+    setTimeout(reload, 300);
+}
+
+render();
+</script>
+</body>
+</html>

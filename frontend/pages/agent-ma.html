@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>并购工具智能体 - 皖美信用</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<link rel="stylesheet" href="../assets/css/shared.css?v=p3.1">
+<script src="../assets/js/shared.js?v=p3.1"></script>
+<script src="../assets/js/interactions.js?v=p3.1"></script>
+<link rel="stylesheet" href="../assets/css/mvp.css?v=p3.1">
+<link rel="stylesheet" href="../assets/css/ai.css?v=p3.1">
+<script src="../assets/js/mock-data.js?v=p3.1"></script>
+<script src="../assets/js/auth.js?v=p3.1"></script>
+<script src="../assets/js/tickets.js?v=p3.1"></script>
+<script src="../assets/js/phase2.js?v=p3.1"></script>
+<script src="../assets/js/components.js?v=p3.1"></script>
+<script src="../assets/js/ai-client.js?v=p3.1"></script>
+
+<style>
+    .breadcrumb { color: var(--color-text-3); font-size: 12px; }
+    .breadcrumb a { color: var(--color-secondary); text-decoration: none; }
+    .breadcrumb a:hover { color: var(--color-primary); }
+    .breadcrumb .sep { margin: 0 6px; color: var(--color-border-2); }
+    .target-card {
+        padding: 14px;
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        transition: all 0.25s;
+        position: relative;
+    }
+    .target-card:hover { border-color: var(--color-primary); box-shadow: var(--shadow-md); transform: translateY(-2px); }
+    .match-score {
+        position: absolute; top: 12px; right: 12px;
+        padding: 2px 10px;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 12px;
+    }
+    .match-score.high { background: linear-gradient(135deg, #C9A063, #A8823E); color: white; }
+    .match-score.mid { background: rgba(15,42,86,0.08); color: #0F2A56; }
+    .cmp-table {
+        font-size: 12px;
+    }
+    .risk-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 8px;
+        border-radius: 3px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+    .risk-low { background: rgba(43,147,72,0.1); color: #2B9348; border: 1px solid #2B934855; }
+    .risk-mid { background: rgba(232,163,61,0.12); color: #B87B2B; border: 1px solid #E8A33D55; }
+    .risk-high { background: rgba(214,64,69,0.1); color: #D64045; border: 1px solid #D6404555; }
+    .check-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 0;
+        border-bottom: 1px dashed var(--color-border);
+    }
+    .check-row:last-child { border-bottom: none; }
+</style>
+</head>
+<body class="bg-wm-bg">
+<script>if (!window.WM_AUTH || !window.WM_AUTH.guard()) throw new Error("not logged in");</script>
+
+<div id="topbar-root"></div>
+<script>document.getElementById('topbar-root').outerHTML = WM_C.renderAuthTopbar('ma');</script>
+
+<div class="bg-white border-b border-wm px-8 py-3">
+    <nav class="breadcrumb">
+        <a href="index.html">🏠 首页</a><span class="sep">/</span>
+        <a href="index.html">七大智能体</a><span class="sep">/</span>
+        <span style="color:var(--color-primary);font-weight:600;">🔗 并购工具智能体</span>
+    </nav>
+</div>
+
+<div class="flex">
+    <aside class="wm-sidebar" style="width:220px;min-height:calc(100vh - 120px);">
+        <div class="p-4 border-b border-wm">
+            <div class="text-xs text-wm-gray3 tracking-widest">AGENT · MODULE</div>
+            <div class="text-base font-bold text-wm-primary mt-1">并购工具智能体</div>
+            <div class="text-xs text-wm-gray mt-1">M&A Tool · 决策中枢</div>
+        </div>
+        <div class="py-2">
+            <div class="sb-item active"><span>🎯</span> 标的智能匹配</div>
+            <div class="sb-item"><span>🖼</span> 标的企业画像</div>
+            <div class="sb-item"><span>🏗</span> 交易结构设计</div>
+            <div class="sb-item"><span>💰</span> 估值定价策略</div>
+            <div class="sb-item"><span>🔁</span> 融资配套方案</div>
+            <div class="sb-item"><span>🛡</span> 风险评估矩阵</div>
+            <div class="sb-item"><span>🔗</span> 整合风险地图</div>
+            <div class="sb-item"><span>📊</span> 投后监测</div>
+            <div class="sb-item"><span>🌐</span> 全球资源库</div>
+        </div>
+    </aside>
+
+    <main class="flex-1 p-6" style="min-width:0;">
+        <div class="flex items-center justify-between mb-5">
+            <div>
+                <div class="flex items-center gap-3 mb-1">
+                    <h1 class="text-2xl font-bold text-wm-secondary">并购重组决策工作台</h1>
+                    <span class="wm-badge" style="background:rgba(184,20,26,0.08);color:#B8141A;border:1px solid #B8141A55;">产业链补链强链专家</span>
+                </div>
+                <div class="text-xs text-wm-gray3">M&A Tool Agent · 标的智能匹配 × 方案智能设计 × 风险精准评估</div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button class="wm-btn wm-btn-ghost wm-btn-sm">🗂 标的库</button>
+                <button class="wm-btn wm-btn-ghost wm-btn-sm">📑 并购案例</button>
+                <button class="wm-btn wm-btn-gold wm-btn-sm">🤖 AI匹配</button>
+                <a href="ticket-new.html?type=ma" class="wm-btn wm-btn-primary wm-btn-sm" style="text-decoration:none;">＋ 新建并购</a>
+            </div>
+        </div>
+
+        <!-- 四大核心目标卡片 -->
+        <div class="grid grid-cols-4 gap-4 mb-4">
+            <div class="wm-card p-4" style="background:linear-gradient(135deg,#FFFFFF,rgba(214,64,69,0.04));border-top:3px solid #D64045;">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="text-xl">🛡</span>
+                    <span class="text-xs text-wm-gray3">核心目标</span>
+                </div>
+                <div class="text-base font-bold text-wm-primary mb-1">防控决策风险</div>
+                <div class="text-xs text-wm-gray">通过全维度穿透式风险扫描，构筑国资违规并购数字化防线</div>
+            </div>
+            <div class="wm-card p-4" style="background:linear-gradient(135deg,#FFFFFF,rgba(201,160,99,0.06));border-top:3px solid #C9A063;">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="text-xl">💎</span>
+                    <span class="text-xs text-wm-gray3">核心目标</span>
+                </div>
+                <div class="text-base font-bold mb-1" style="color:#A8823E;">提升并购质量</div>
+                <div class="text-xs text-wm-gray">基于产业链互补逻辑精准匹配优质标的，符合省属企业战略定位</div>
+            </div>
+            <div class="wm-card p-4" style="background:linear-gradient(135deg,#FFFFFF,rgba(15,42,86,0.04));border-top:3px solid #0F2A56;">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="text-xl">⚡</span>
+                    <span class="text-xs text-wm-gray3">核心目标</span>
+                </div>
+                <div class="text-base font-bold text-wm-secondary mb-1">优化执行效率</div>
+                <div class="text-xs text-wm-gray">自动化生成合规方案与定价测算，降低门槛，缩短运作周期</div>
+            </div>
+            <div class="wm-card p-4" style="background:linear-gradient(135deg,#FFFFFF,rgba(43,147,72,0.04));border-top:3px solid #2B9348;">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="text-xl">🔗</span>
+                    <span class="text-xs text-wm-gray3">核心目标</span>
+                </div>
+                <div class="text-base font-bold text-emerald-700 mb-1">助力补链强链</div>
+                <div class="text-xs text-wm-gray">聚焦"三地一区"战略，引导国资向支柱产业及战略新兴产业集聚</div>
+            </div>
+        </div>
+
+        <!-- 标的智能匹配：传统vs智能对比 -->
+        <div class="wm-card mb-4">
+            <div class="wm-card-header">
+                <h3>标的智能匹配 · 传统模式 vs 智能体模式</h3>
+                <span class="wm-badge wm-badge-aaa">AI技术赋能</span>
+            </div>
+            <div class="p-4">
+                <table class="wm-table cmp-table">
+                    <thead>
+                        <tr>
+                            <th style="width:12%;">维度</th>
+                            <th style="width:42%;">🧓 传统匹配模式</th>
+                            <th style="width:46%;">🤖 智能体匹配模式</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="font-bold">数据深度</td>
+                            <td class="text-wm-gray">依赖公开财报及有限调研，存在显著信息滞后</td>
+                            <td class="text-emerald-700 font-semibold">✓ 实时汇聚财务、经营、舆情、穿透式关联方等全量数据</td>
+                        </tr>
+                        <tr>
+                            <td class="font-bold">逻辑深度</td>
+                            <td class="text-wm-gray">表层财务指标筛选，缺乏产业协同逻辑</td>
+                            <td class="text-emerald-700 font-semibold">✓ 基于产业研究模型实现产业链互补性与技术壁垒对标</td>
+                        </tr>
+                        <tr>
+                            <td class="font-bold">匹配维度</td>
+                            <td class="text-wm-gray">侧重地域与资产规模等物理指标</td>
+                            <td class="text-emerald-700 font-semibold">✓ 引入上市公司平台地位、控制权溢价空间等多维因子</td>
+                        </tr>
+                        <tr>
+                            <td class="font-bold">响应速度</td>
+                            <td class="text-wm-gray">人工搜寻与初筛，周期通常以月为单位</td>
+                            <td class="text-emerald-700 font-semibold">✓ 秒级检索并同步生成标的精准画像，实现实时动态响应</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 当前匹配：产业链补链强链 -->
+        <div class="wm-card mb-4">
+            <div class="wm-card-header">
+                <h3>当前匹配 · 江汽集团 / 新能源汽车三电系统产业链补链</h3>
+                <div class="flex items-center gap-2">
+                    <span class="wm-badge wm-badge-blue">已匹配 4,126 个候选</span>
+                    <span class="wm-badge wm-badge-green">Top 5 精筛</span>
+                </div>
+            </div>
+            <div class="p-4 grid grid-cols-5 gap-3" id="targets-grid"></div>
+        </div>
+
+        <!-- 交易结构 + 估值定价 -->
+        <div class="grid grid-cols-12 gap-4 mb-4">
+            <!-- 9种交易结构 -->
+            <div class="wm-card col-span-7">
+                <div class="wm-card-header">
+                    <h3>交易结构智能设计 · 9 种资本运作类型</h3>
+                </div>
+                <div class="p-4">
+                    <table class="wm-table">
+                        <thead><tr><th>类型</th><th>适用场景</th><th>关键考量</th><th>匹配度</th></tr></thead>
+                        <tbody id="tx-rows"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 估值区间 -->
+            <div class="wm-card col-span-5">
+                <div class="wm-card-header">
+                    <h3>AI估值定价策略</h3>
+                    <span class="text-xs text-wm-gray3">多因子算法 · 蒙特卡洛模拟</span>
+                </div>
+                <div class="p-4">
+                    <div id="chart-valuation" style="height:280px;"></div>
+                    <div class="mt-3 p-3 rounded" style="background:linear-gradient(135deg,rgba(184,20,26,0.05),rgba(201,160,99,0.05));">
+                        <div class="grid grid-cols-3 gap-2 text-center">
+                            <div><div class="text-xs text-wm-gray3">保守估值</div><div class="text-base font-bold font-mono text-wm-secondary">8.5 亿</div></div>
+                            <div><div class="text-xs text-wm-gray3">中位数</div><div class="text-base font-bold font-mono text-wm-primary">11.2 亿</div></div>
+                            <div><div class="text-xs text-wm-gray3">乐观估值</div><div class="text-base font-bold font-mono" style="color:#A8823E;">14.8 亿</div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 风险评估矩阵 + 检查清单 -->
+        <div class="grid grid-cols-12 gap-4 mb-4">
+            <!-- 风险评估矩阵 -->
+            <div class="wm-card col-span-7">
+                <div class="wm-card-header">
+                    <h3>并购风险评估矩阵 · 六大维度穿透扫描</h3>
+                    <span class="wm-badge wm-badge-green">综合风险：低</span>
+                </div>
+                <div class="p-4">
+                    <div id="chart-risk" style="height:320px;"></div>
+                </div>
+            </div>
+
+            <!-- 风险防控检查清单 -->
+            <div class="wm-card col-span-5">
+                <div class="wm-card-header">
+                    <h3>风险防控检查清单</h3>
+                    <span class="wm-badge wm-badge-green">4/5 完成</span>
+                </div>
+                <div class="p-4">
+                    <div class="check-row">
+                        <input type="checkbox" checked class="w-4 h-4 accent-red-700">
+                        <div class="flex-1">
+                            <div class="text-sm font-semibold text-wm-secondary">标的企业信用风险及合规记录扫描</div>
+                            <div class="text-xs text-wm-gray3 mt-0.5">信用等级AA+、近3年零处罚、零重大诉讼</div>
+                        </div>
+                        <span class="risk-badge risk-low">低风险</span>
+                    </div>
+                    <div class="check-row">
+                        <input type="checkbox" checked class="w-4 h-4 accent-red-700">
+                        <div class="flex-1">
+                            <div class="text-sm font-semibold text-wm-secondary">标的企业债务结构与经营稳定性评估</div>
+                            <div class="text-xs text-wm-gray3 mt-0.5">资产负债率52%，经营现金流为正</div>
+                        </div>
+                        <span class="risk-badge risk-low">低风险</span>
+                    </div>
+                    <div class="check-row">
+                        <input type="checkbox" checked class="w-4 h-4 accent-red-700">
+                        <div class="flex-1">
+                            <div class="text-sm font-semibold text-wm-secondary">产业链协同价值与补链效果分析</div>
+                            <div class="text-xs text-wm-gray3 mt-0.5">三电系统补链成功率92%，协同评分8.6</div>
+                        </div>
+                        <span class="risk-badge risk-low">高协同</span>
+                    </div>
+                    <div class="check-row">
+                        <input type="checkbox" checked class="w-4 h-4 accent-red-700">
+                        <div class="flex-1">
+                            <div class="text-sm font-semibold text-wm-secondary">交易完成后整合风险及文化冲突预判</div>
+                            <div class="text-xs text-wm-gray3 mt-0.5">需关注管理体系差异，建议3年渐进整合</div>
+                        </div>
+                        <span class="risk-badge risk-mid">中风险</span>
+                    </div>
+                    <div class="check-row">
+                        <input type="checkbox" class="w-4 h-4 accent-red-700">
+                        <div class="flex-1">
+                            <div class="text-sm font-semibold text-wm-secondary">商誉减值风险前置评估 <span class="text-wm-primary">⏳</span></div>
+                            <div class="text-xs text-wm-gray3 mt-0.5">正在执行蒙特卡洛模拟（200次）</div>
+                        </div>
+                        <span class="risk-badge risk-mid">评估中</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 五大应用场景 + 投后监测 -->
+        <div class="grid grid-cols-12 gap-4">
+            <div class="wm-card col-span-7">
+                <div class="wm-card-header">
+                    <h3>五大典型应用场景</h3>
+                </div>
+                <div class="p-4 grid grid-cols-5 gap-3">
+                    <div class="p-3 rounded border border-wm text-center" style="background:linear-gradient(180deg,rgba(184,20,26,0.05),#FFFFFF);">
+                        <div class="text-2xl mb-2">🔗</div>
+                        <div class="text-sm font-bold text-wm-primary mb-1">产业链补链强链</div>
+                        <div class="text-xs text-wm-gray">聚焦安徽新能源汽车、新一代IT等支柱产业，专精特新标的</div>
+                        <div class="mt-2 text-xs font-mono text-wm-primary">在执行 12 个</div>
+                    </div>
+                    <div class="p-3 rounded border border-wm text-center" style="background:linear-gradient(180deg,rgba(15,42,86,0.05),#FFFFFF);">
+                        <div class="text-2xl mb-2">📈</div>
+                        <div class="text-sm font-bold text-wm-secondary mb-1">上市公司资本运作</div>
+                        <div class="text-xs text-wm-gray">省属国有上市公司定增/资产注入/重组</div>
+                        <div class="mt-2 text-xs font-mono text-wm-secondary">在执行 6 个</div>
+                    </div>
+                    <div class="p-3 rounded border border-wm text-center" style="background:linear-gradient(180deg,rgba(201,160,99,0.06),#FFFFFF);">
+                        <div class="text-2xl mb-2">🌐</div>
+                        <div class="text-sm font-bold mb-1" style="color:#A8823E;">跨区域与跨境并购</div>
+                        <div class="text-xs text-wm-gray">利用全球资本市场数据库，辅助跨境布局</div>
+                        <div class="mt-2 text-xs font-mono" style="color:#A8823E;">在执行 3 个</div>
+                    </div>
+                    <div class="p-3 rounded border border-wm text-center" style="background:linear-gradient(180deg,rgba(43,147,72,0.04),#FFFFFF);">
+                        <div class="text-2xl mb-2">🔄</div>
+                        <div class="text-sm font-bold text-emerald-700 mb-1">国资国企改革</div>
+                        <div class="text-xs text-wm-gray">混改、股权多元化、低效资产重组</div>
+                        <div class="mt-2 text-xs font-mono text-emerald-700">在执行 8 个</div>
+                    </div>
+                    <div class="p-3 rounded border border-wm text-center" style="background:linear-gradient(180deg,rgba(138,15,20,0.04),#FFFFFF);">
+                        <div class="text-2xl mb-2">🔬</div>
+                        <div class="text-sm font-bold text-wm-primary mb-1">科创孵化型并购</div>
+                        <div class="text-xs text-wm-gray">早期科创企业股权投资布局</div>
+                        <div class="mt-2 text-xs font-mono text-wm-primary">在执行 15 个</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 投后监测 -->
+            <div class="wm-card col-span-5">
+                <div class="wm-card-header">
+                    <h3>已完成并购 · 投后监测</h3>
+                    <span class="wm-badge wm-badge-blue">44 项</span>
+                </div>
+                <div class="p-4" style="max-height:330px;overflow-y:auto;">
+                    <table class="wm-table">
+                        <thead>
+                            <tr><th>并购项目</th><th>完成时间</th><th>整合进度</th><th>业绩承诺</th></tr>
+                        </thead>
+                        <tbody id="post-rows"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<div id="footer-root"></div>
+<script>document.getElementById('footer-root').outerHTML = renderFooter();</script>
+
+<script>
+// 标的卡片
+(function(){
+    const targets = [
+        { name:'合肥XX电池', prov:'合肥', rev:'18亿', match:96, ind:'动力电池', hl:'国内TOP5动力电池厂', plat:'A股·科创板' },
+        { name:'深圳XX电机', prov:'深圳', rev:'12亿', match:92, ind:'驱动电机', hl:'头部新能源电机供应商', plat:'A股·主板' },
+        { name:'苏州XX电控', prov:'苏州', rev:'8亿', match:88, ind:'电控系统', hl:'专精特新"小巨人"', plat:'新三板' },
+        { name:'宁德XX材料', prov:'宁德', rev:'22亿', match:85, ind:'正极材料', hl:'与CATL深度绑定', plat:'A股·创业板' },
+        { name:'芜湖XX零部件', prov:'芜湖', rev:'6亿', match:82, ind:'零部件总成', hl:'本地产业链伙伴', plat:'未上市' }
+    ];
+    document.getElementById('targets-grid').innerHTML = targets.map((t, i) => `
+        <div class="target-card">
+            <div class="match-score ${t.match>=90?'high':'mid'}">${t.match}%</div>
+            <div class="text-xs text-wm-gray3 tracking-widest mb-1">匹配 ${i+1}</div>
+            <div class="text-base font-bold text-wm-secondary mb-1">${t.name}</div>
+            <div class="text-xs text-wm-gray3 mb-3">📍 ${t.prov} · ${t.ind}</div>
+            <div class="space-y-1 text-xs mb-3">
+                <div class="flex justify-between">
+                    <span class="text-wm-gray3">营收</span>
+                    <span class="font-mono font-bold text-wm-primary">${t.rev}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-wm-gray3">资本平台</span>
+                    <span class="text-wm-secondary font-semibold">${t.plat}</span>
+                </div>
+            </div>
+            <div class="text-xs text-wm-gray italic border-t border-wm pt-2">"${t.hl}"</div>
+            <button class="wm-btn wm-btn-ghost wm-btn-sm w-full mt-3" style="padding:4px;">查看画像 →</button>
+        </div>
+    `).join('');
+})();
+
+// 交易结构
+(function(){
+    const types = [
+        { t:'横向并购', sce:'同行业扩张、市场份额提升', key:'反垄断、协同效应', match:92 },
+        { t:'纵向并购', sce:'产业链补链强链、上下游整合', key:'业务整合、供应链协同', match:96 },
+        { t:'混合并购', sce:'多元化战略', key:'战略协同、风险分散', match:68 },
+        { t:'借壳上市', sce:'非上市国企资产证券化', key:'壳公司选择、交易合规', match:52 },
+        { t:'吸收合并', sce:'集团内资源整合', key:'税务筹划、股东利益', match:72 },
+        { t:'资产收购', sce:'剥离非核心、收购优质资产', key:'资产评估、税务', match:78 },
+        { t:'股权收购', sce:'控股/参股', key:'估值、股权结构、治理', match:86 },
+        { t:'混改', sce:'引入战略投资者、员工持股', key:'定价公允、党组织作用', match:64 },
+        { t:'跨境并购', sce:'海外优质资源引进', key:'外汇、法律、文化', match:58 }
+    ];
+    document.getElementById('tx-rows').innerHTML = types.map(t => `
+        <tr>
+            <td class="font-semibold text-wm-secondary">${t.t}</td>
+            <td class="text-xs">${t.sce}</td>
+            <td class="text-xs text-wm-gray">${t.key}</td>
+            <td>
+                <div class="flex items-center gap-2">
+                    <div class="wm-progress" style="width:60px;height:4px;">
+                        <div style="width:${t.match}%;"></div>
+                    </div>
+                    <span class="font-mono text-xs font-bold" style="color:var(--color-primary);">${t.match}</span>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+})();
+
+// 估值蒙特卡洛
+(function(){
+    const chart = echarts.init(document.getElementById('chart-valuation'));
+    // 生成模拟分布
+    const bins = [];
+    for (let v = 6; v <= 16; v += 0.5) {
+        const dist = Math.exp(-Math.pow((v-11.2)/2.5, 2));
+        bins.push([v, Math.round(dist * 180)]);
+    }
+    chart.setOption({
+        tooltip: { trigger: 'axis', formatter: (p) => `估值 ${p[0].data[0]} 亿<br/>频次 ${p[0].data[1]}` },
+        grid: { top: 20, right: 15, bottom: 30, left: 45 },
+        xAxis: { type: 'value', name:'估值(亿)', axisLabel:{fontSize:10} },
+        yAxis: { type: 'value', name:'频次', splitLine:{ lineStyle:{ color:'#E5E1D6', type:'dashed' }}, axisLabel:{fontSize:10} },
+        series: [{
+            type: 'bar',
+            data: bins,
+            barWidth: 14,
+            itemStyle: {
+                borderRadius: [3, 3, 0, 0],
+                color: (p) => {
+                    const v = p.value[0];
+                    if (v < 9) return '#0F2A56';
+                    if (v < 13) return '#B8141A';
+                    return '#C9A063';
+                }
+            },
+            markLine: {
+                silent: true, symbol: 'none', lineStyle: { type: 'dashed' },
+                data: [
+                    { xAxis: 11.2, label: { formatter:'中位 11.2亿', color:'#B8141A', fontWeight: 700, fontSize: 10 }, lineStyle:{ color:'#B8141A', width: 2 } }
+                ]
+            }
+        }]
+    });
+    window.addEventListener('resize', () => chart.resize());
+})();
+
+// 风险六维
+(function(){
+    const chart = echarts.init(document.getElementById('chart-risk'));
+    chart.setOption({
+        tooltip: {},
+        radar: {
+            indicator: [
+                { name:'信用风险', max:100 },
+                { name:'经营风险', max:100 },
+                { name:'债务风险', max:100 },
+                { name:'合规风险', max:100 },
+                { name:'整合风险', max:100 },
+                { name:'商誉减值风险', max:100 }
+            ],
+            radius: '66%',
+            splitArea: { areaStyle: { color: ['rgba(201,160,99,0.03)', 'rgba(15,42,86,0.02)'] } },
+            axisName: { color: '#4A4A4A', fontSize: 11, fontWeight: 600 },
+            splitLine: { lineStyle: { color: '#D4CEB8' } }
+        },
+        series: [{
+            type: 'radar',
+            data: [
+                { value: [22, 18, 28, 15, 45, 38], name: '风险值（越低越安全）',
+                  areaStyle: { color: 'rgba(43, 147, 72, 0.2)' },
+                  lineStyle: { color: '#2B9348', width: 2 },
+                  itemStyle: { color: '#2B9348' } },
+                { value: [60, 60, 60, 60, 60, 60], name: '警戒线',
+                  lineStyle: { color: '#E8A33D', type: 'dashed', width: 1.5 },
+                  itemStyle: { color: '#E8A33D' } }
+            ]
+        }]
+    });
+    window.addEventListener('resize', () => chart.resize());
+})();
+
+// 投后监测
+(function(){
+    const data = [
+        { n:'皖能×XX环保', d:'2023-08', p:85, c:'达成' },
+        { n:'海螺×XX新材料', d:'2023-12', p:72, c:'达成' },
+        { n:'建工×XX装备', d:'2024-03', p:92, c:'超额' },
+        { n:'江汽×XX电机', d:'2024-05', p:58, c:'进行' },
+        { n:'古井贡×渠道', d:'2024-07', p:38, c:'进行' },
+        { n:'交控×XX物流', d:'2024-09', p:18, c:'初期' }
+    ];
+    document.getElementById('post-rows').innerHTML = data.map(d => `
+        <tr>
+            <td class="text-xs font-semibold text-wm-secondary">${d.n}</td>
+            <td class="text-xs font-mono">${d.d}</td>
+            <td>
+                <div class="flex items-center gap-2">
+                    <div class="wm-progress" style="width:60px;height:4px;">
+                        <div style="width:${d.p}%;"></div>
+                    </div>
+                    <span class="text-xs font-mono">${d.p}%</span>
+                </div>
+            </td>
+            <td>${d.c==='超额'?'<span class="wm-badge wm-badge-green">超额</span>':d.c==='达成'?'<span class="wm-badge wm-badge-blue">达成</span>':d.c==='进行'?'<span class="wm-badge wm-badge-orange">进行</span>':'<span class="wm-badge">初期</span>'}</td>
+        </tr>
+    `).join('');
+})();
+</script>
+<script>if (window.WM_C && window.WM_C.bindRoleSwitcher) WM_C.bindRoleSwitcher();</script>
+</body>
+</html>

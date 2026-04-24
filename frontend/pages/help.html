@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>帮助中心 - 皖美信用</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="../assets/css/shared.css?v=gap1">
+<link rel="stylesheet" href="../assets/css/mvp.css?v=gap1">
+<link rel="stylesheet" href="../assets/css/ai.css?v=gap1">
+<script src="../assets/js/shared.js?v=gap1"></script>
+<script src="../assets/js/interactions.js?v=gap1"></script>
+<script src="../assets/js/mock-data.js?v=gap1"></script>
+<script src="../assets/js/auth.js?v=gap1"></script>
+<script src="../assets/js/tickets.js?v=gap1"></script>
+<script src="../assets/js/phase2.js?v=gap1"></script>
+<script src="../assets/js/components.js?v=gap1"></script>
+<script src="../assets/js/ai-client.js?v=gap1"></script>
+<style>
+  .help-hero {
+    background: linear-gradient(135deg, var(--color-secondary), var(--color-primary));
+    color: #FFF;
+    padding: 40px 48px;
+    border-radius: 10px;
+    margin-bottom: 24px;
+    position: relative; overflow:hidden;
+  }
+  .help-hero::after {
+    content:""; position:absolute; right:-40px; top:-40px; width: 200px; height:200px;
+    background: radial-gradient(circle, rgba(201,160,99,0.3), transparent);
+    pointer-events: none;
+  }
+  .help-cat {
+    padding: 14px 16px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all .2s;
+    display: flex; align-items: center; gap: 10px;
+    background: #FFF;
+  }
+  .help-cat:hover { border-color: var(--color-primary); transform: translateX(2px); }
+  .help-cat.active { border-color: var(--color-primary); background: rgba(184,20,26,0.04); box-shadow: 0 0 0 2px rgba(184,20,26,0.1); }
+  .faq-item {
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    margin-bottom: 8px;
+    background: #FFF;
+    overflow: hidden;
+  }
+  .faq-q {
+    padding: 14px 18px;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--color-text);
+    display: flex; align-items: center; justify-content: space-between;
+    transition: background .2s;
+  }
+  .faq-q:hover { background: #FAFAF7; }
+  .faq-q::after { content: "⌄"; transition: transform .2s; color: var(--color-accent); font-size: 18px; }
+  .faq-item.open .faq-q::after { transform: rotate(180deg); }
+  .faq-a {
+    padding: 0 18px; max-height: 0; overflow: hidden; transition: all .3s;
+    font-size: 13px; color: var(--color-text-2); line-height: 1.9;
+  }
+  .faq-item.open .faq-a { padding: 12px 18px 16px; max-height: 400px; }
+  .tour-step {
+    display: flex; gap: 14px;
+    padding: 14px 18px;
+    background: #FFF;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    margin-bottom: 10px;
+  }
+  .tour-step-num {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+    color: #FFF;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+</style>
+</head>
+<body class="bg-wm-bg">
+<script>if (!window.WM_AUTH.guard()) throw new Error('not logged in');</script>
+
+<div id="topbar-root"></div>
+<script>document.getElementById('topbar-root').outerHTML = WM_C.renderAuthTopbar('help');</script>
+
+<main class="px-8 py-6 max-w-[1500px] mx-auto">
+    <h1 class="text-2xl font-bold text-wm-secondary mb-1">❓ 帮助中心</h1>
+    <div class="text-xs text-wm-gray3 mb-5">新手引导 · 常见问题 · 合规文档 · 联系管理员</div>
+
+    <!-- Hero 搜索 -->
+    <div class="help-hero">
+        <div class="relative z-10" style="max-width: 720px;">
+            <div class="text-xs tracking-[3px] opacity-80 mb-2">WMCD · HELP CENTER</div>
+            <div class="text-3xl font-bold mb-3" style="font-family:SimSun,serif;letter-spacing:6px;">您好，我能为您做什么？</div>
+            <div class="opacity-80 text-sm mb-5">皖美信用平台提供 7 大智能体全业务支撑 · 遇到问题请先搜索或咨询 AI 助手</div>
+            <div class="flex gap-3">
+                <input type="text" id="help-search" placeholder="🔍 搜索问题关键词（如：信用评级、融资方案、如何登录…）"
+                    style="flex:1;padding:12px 16px;border-radius:6px;border:none;font-size:14px;">
+                <button class="wm-btn wm-btn-sm" style="background:#FFF;color:var(--color-primary);border:none;padding:0 20px;font-weight:700;" id="btn-ask-ai">🤖 问 AI 助手</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-12 gap-5">
+        <!-- 左：目录 -->
+        <div class="col-span-3">
+            <div class="wm-card">
+                <div class="wm-card-header"><h3>📚 分类</h3></div>
+                <div class="p-3" id="cat-list"></div>
+            </div>
+
+            <div class="wm-card mt-4">
+                <div class="wm-card-header"><h3>📞 联系我们</h3></div>
+                <div class="p-4 text-xs text-wm-gray3 leading-7">
+                    <div>🏛 主管：安徽省国资委信息化处</div>
+                    <div>📞 技术支持：0551-XXXXXXXX</div>
+                    <div>📧 support@anhui-sasac.gov.cn</div>
+                    <div>🕒 工作日 08:30 - 17:30</div>
+                    <div class="mt-3 pt-3 border-t border-dashed">🚨 系统故障 24h 应急：<strong class="text-wm-primary">400-XXX-XXXX</strong></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 中：内容 -->
+        <div class="col-span-6">
+            <div class="wm-card">
+                <div class="wm-card-header">
+                    <h3 id="content-title">🚀 新手引导（6 步）</h3>
+                    <button class="wm-btn wm-btn-ghost wm-btn-xs" onclick="window.showToast('将在首次登录时自动触发','info')">首登 Tour</button>
+                </div>
+                <div class="p-4" id="content-body"></div>
+            </div>
+        </div>
+
+        <!-- 右：快捷入口 -->
+        <div class="col-span-3">
+            <div class="wm-card">
+                <div class="wm-card-header"><h3>⚡ 快捷入口</h3></div>
+                <div class="p-2">
+                    <a href="workbench.html" class="sb-item"><span>🏠</span><span>我的工作台</span></a>
+                    <a href="todos.html" class="sb-item"><span>✓</span><span>待办中心</span></a>
+                    <a href="my-tickets.html" class="sb-item"><span>📁</span><span>我的单据</span></a>
+                    <a href="documents.html" class="sb-item"><span>📚</span><span>文档中心</span></a>
+                    <a href="profile.html" class="sb-item"><span>👤</span><span>个人中心</span></a>
+                    <a href="settings.html" class="sb-item"><span>⚙️</span><span>系统设置</span></a>
+                </div>
+            </div>
+
+            <div class="wm-card mt-4">
+                <div class="wm-card-header"><h3>⌨️ 快捷键</h3></div>
+                <div class="p-3 text-xs leading-8">
+                    <div class="flex justify-between"><span>全局搜索</span><kbd class="wm-kbd">Ctrl K</kbd></div>
+                    <div class="flex justify-between"><span>呼出 AI 助手</span><kbd class="wm-kbd">Ctrl /</kbd></div>
+                    <div class="flex justify-between"><span>返回工作台</span><kbd class="wm-kbd">G H</kbd></div>
+                    <div class="flex justify-between"><span>切到信用</span><kbd class="wm-kbd">G A</kbd></div>
+                    <div class="flex justify-between"><span>切到风控</span><kbd class="wm-kbd">G R</kbd></div>
+                    <div class="flex justify-between"><span>退出登录</span><kbd class="wm-kbd">Alt Q</kbd></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 反馈表单 -->
+    <div class="wm-card mt-6">
+        <div class="wm-card-header"><h3>💬 问题反馈</h3></div>
+        <div class="p-5">
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="wm-form-label">问题类型</label>
+                    <select class="wm-input" id="fb-type">
+                        <option value="bug">🐛 功能缺陷</option>
+                        <option value="need">💡 需求建议</option>
+                        <option value="ui">🎨 视觉/交互建议</option>
+                        <option value="other">其他</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="wm-form-label">优先级</label>
+                    <select class="wm-input" id="fb-priority">
+                        <option>🟢 普通</option>
+                        <option>🟡 较重要</option>
+                        <option>🔴 阻塞问题</option>
+                    </select>
+                </div>
+            </div>
+            <label class="wm-form-label">详细描述（建议描述复现步骤、期望结果、实际结果）</label>
+            <textarea class="wm-input" id="fb-content" rows="4" placeholder="..."></textarea>
+            <div class="mt-3 flex items-center justify-end gap-2">
+                <span class="text-xs text-wm-gray3">提交后将转至信息化处，3 个工作日内响应</span>
+                <button class="wm-btn wm-btn-primary wm-btn-sm" id="btn-submit-fb">提交反馈</button>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+(function () {
+    'use strict';
+
+    const CATS = [
+        { id: 'tour', name: '🚀 新手引导', active: true },
+        { id: 'login', name: '🔐 登录与认证' },
+        { id: 'credit', name: '🏛 信用优化' },
+        { id: 'financing', name: '💰 融资支持' },
+        { id: 'investment', name: '📈 投资决策' },
+        { id: 'assets', name: '🏗 三资盘活' },
+        { id: 'ma', name: '🔗 并购工具' },
+        { id: 'supply', name: '🔄 供应链管理' },
+        { id: 'risk', name: '🛡 风险防控' },
+        { id: 'compliance', name: '📋 合规与安全' },
+    ];
+
+    const FAQS = {
+        login: [
+            { q: '支持哪些登录方式？', a: '平台支持 8 种：账号密码、政务网 SSO、CA 证书、国密 U-Key 以及开发测试环境下的 7 种角色快速登录。生产环境以 SSO + CA 为主。' },
+            { q: 'CA 证书驱动检测失败怎么办？', a: '检查驱动是否已安装、证书是否在有效期、电脑是否开启 USB 口。如持续失败请在「个人中心 → 安全设置 → CA 证书绑定」重新绑定；或联系单位系统管理员。' },
+            { q: '忘记密码如何重置？', a: '依据政务合规要求，本平台不支持自助邮箱重置。请联系所在单位系统管理员，由管理员在「组织架构管理后台」发起重置审批，审批通过后您将收到一次性临时密码。' },
+            { q: '首次登录的仪式感界面怎么跳过？', a: '登录页右上角「直接登录」Chip 可一键跳过信印启封动画，或使用键盘 Tab + Enter 等价触发。已登录过一次的会话后续自动跳过。' },
+        ],
+        credit: [
+            { q: '信用评级分几个等级？', a: 'AAA/AA/A/BBB/BB/B/CCC 共 7 级，对应综合评分 0-1000 分，AAA 为最高信用等级。' },
+            { q: '评级多久更新一次？', a: '支持月度/季度自动重估，重大事件（重大诉讼/违约/改组）触发即时重估。' },
+            { q: '对评级结果有异议怎么办？', a: '在「信用总览」右上角点击「发起异议」填写理由并上传证据，专家复核后在 10 个工作日内给出调整结论。' },
+            { q: '六维度评级具体包含哪些？', a: '财务健康 · 履约表现 · 合规记录 · 经营活力 · 社会信用 · 国资特色（保值增值/三重一大/党建合规等）。' },
+        ],
+        financing: [
+            { q: '融资方案 AI 是如何推荐的？', a: '基于企业信用画像 + 债务结构 + 行业特征 + 市场利率，在 20+ 融资品种中综合匹配，输出成本最优 TOP 3。' },
+            { q: '科创债/绿色债如何申报？', a: '进入「融资支持智能体 → 绿色/科创专项」区块，按向导提供项目资质证明材料，AI 自动进行专项资质核验与项目包装。' },
+        ],
+        investment: [
+            { q: 'Multi-Agent 尽调需要多久？', a: '演示环境约 15-20 秒；真实尽调约 30-120 分钟（视数据源接入情况）。' },
+            { q: '估值模型可以自定义吗？', a: '可在「投委会 → 估值参数」调整 DCF 贴现率、同行 PE 区间等关键参数。' },
+        ],
+        assets: [
+            { q: '三资盘活涵盖哪些品类？', a: '房产、土地、设备、股权、债权、无形资产、特许经营权、数据资产。' },
+            { q: 'REITs/ABS 方案可以模拟吗？', a: '可以。进入「三资 → 方案模拟」选择 REITs/ABS 模板，AI 自动输出交易结构、评级预估、投资者匹配。' },
+        ],
+        ma: [
+            { q: '并购标的筛选的数据源是什么？', a: 'A 股 / 港股 / 美股 / 新三板 / 非上市企业数据库（远东资本市场全量资源池）。' },
+            { q: '九种交易结构是哪些？', a: '现金收购、股权置换、混合支付、定向增发、借壳上市、分拆上市、资产置换、混改重组、跨境并购。' },
+        ],
+        supply: [
+            { q: '全省标准供应商库如何共享？', a: '通过「供应链 → 标准库」按行业/品类/资质查询，经申请单位授权后跨单位调用。黑名单库统一强制生效。' },
+            { q: 'AI 智能评标是否合规？', a: '完全合规。AI 仅辅助异常检测（围标串标识别）不参与评分，最终评标由专家委员会裁定。' },
+        ],
+        risk: [
+            { q: '三穿透分别是什么？', a: '主体穿透（集团→子→孙）· 业务穿透（关联交易/担保圈/资金池）· 数据穿透（跨系统关联分析）。' },
+            { q: '风险预警分哪几个等级？', a: '红（紧急处置）· 橙（重点关注）· 黄（日常跟踪）· 绿（清洁）四级。' },
+        ],
+        compliance: [
+            { q: '平台过了哪些合规认证？', a: '等保三级 · ISO 27001 · 密码应用安全性评估 · 信息安全管理体系。' },
+            { q: '我的数据会被保存多久？', a: '审计日志保留 6 年（符合国资监管要求）；业务数据依据分级保留 3-30 年；个人偏好数据本地保存。' },
+            { q: '数据离开安徽省吗？', a: '核心敏感数据「不出域」，只在省属数据中心内流转；跨主体通过联邦学习 + MPC 实现「可用不可见」。' },
+        ],
+    };
+
+    const TOUR_STEPS = [
+        { num: 1, title: '完成身份认证', desc: '首次登录使用政务网 SSO 或 CA 证书；演示环境可直接选择角色快速进入。' },
+        { num: 2, title: '熟悉工作台', desc: '工作台会根据您的角色显示：我的待办、在办单据、快速操作、最新消息、推荐内容。' },
+        { num: 3, title: '访问七大智能体', desc: '顶部导航「🧭 七大智能体」下拉菜单访问信用、融资、投资、三资、并购、供应链、风控。' },
+        { num: 4, title: 'AI 助手随时呼出', desc: '每个业务页右下角有 AI 助手入口，支持自然语言提问、流式回复、思考过程可视化。' },
+        { num: 5, title: 'Multi-Agent 工作流', desc: '复杂任务（投资/并购尽调、风险穿透扫描）请使用「AI 工作流」页进行智能编排。' },
+        { num: 6, title: '遇到问题', desc: '首先在帮助中心搜索关键词，或点击「问 AI 助手」；紧急问题联系 400-XXX-XXXX。' },
+    ];
+
+    function renderCats() {
+        const c = document.getElementById('cat-list');
+        c.innerHTML = CATS.map(cat => `
+            <div class="help-cat ${cat.active ? 'active' : ''}" data-cat="${cat.id}">
+                <span>${cat.name}</span>
+            </div>
+        `).join('');
+        c.querySelectorAll('.help-cat').forEach(el => {
+            el.addEventListener('click', () => {
+                c.querySelectorAll('.help-cat').forEach(x => x.classList.remove('active'));
+                el.classList.add('active');
+                renderContent(el.getAttribute('data-cat'));
+            });
+        });
+    }
+
+    function renderContent(cat) {
+        const title = CATS.find(c => c.id === cat)?.name || '';
+        document.getElementById('content-title').textContent = title;
+        const body = document.getElementById('content-body');
+        if (cat === 'tour') {
+            body.innerHTML = TOUR_STEPS.map(s => `
+                <div class="tour-step">
+                    <div class="tour-step-num">${s.num}</div>
+                    <div class="flex-1">
+                        <div class="font-bold text-wm-secondary">${s.title}</div>
+                        <div class="text-xs text-wm-gray3 mt-1">${s.desc}</div>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            const list = FAQS[cat] || [];
+            if (list.length === 0) {
+                body.innerHTML = '<div class="text-center text-wm-gray3 py-8">该分类下暂无常见问题，请向 AI 助手提问</div>';
+                return;
+            }
+            body.innerHTML = list.map((f, i) => `
+                <div class="faq-item" data-idx="${i}">
+                    <div class="faq-q">${window.WM_C.escapeHtml(f.q)}</div>
+                    <div class="faq-a">${window.WM_C.escapeHtml(f.a)}</div>
+                </div>
+            `).join('');
+            body.querySelectorAll('.faq-item').forEach(item => {
+                item.addEventListener('click', () => item.classList.toggle('open'));
+            });
+        }
+    }
+
+    renderCats();
+    renderContent('tour');
+
+    // 搜索
+    document.getElementById('help-search').addEventListener('input', (e) => {
+        const q = e.target.value.trim().toLowerCase();
+        if (!q) return;
+        const all = Object.entries(FAQS).flatMap(([cat, arr]) => arr.map(x => ({ cat, ...x })));
+        const match = all.filter(x => x.q.toLowerCase().includes(q) || x.a.toLowerCase().includes(q));
+        if (match.length === 0) return;
+        document.getElementById('content-title').textContent = `🔍 搜索「${q}」结果（${match.length}）`;
+        const body = document.getElementById('content-body');
+        body.innerHTML = match.map((f, i) => `
+            <div class="faq-item" data-idx="${i}">
+                <div class="faq-q">${window.WM_C.escapeHtml(f.q)} <span class="text-xs text-wm-gray3 ml-2">[${CATS.find(c=>c.id===f.cat)?.name || f.cat}]</span></div>
+                <div class="faq-a">${window.WM_C.escapeHtml(f.a)}</div>
+            </div>
+        `).join('');
+        body.querySelectorAll('.faq-item').forEach(item => {
+            item.addEventListener('click', () => item.classList.toggle('open'));
+        });
+    });
+
+    // AI 助手唤起
+    document.getElementById('btn-ask-ai').addEventListener('click', () => {
+        const q = document.getElementById('help-search').value.trim();
+        if (window.WMAI && typeof window.WMAI.open === 'function') {
+            window.WMAI.open(q);
+        } else {
+            window.showToast('正在唤起 AI 助手…', 'info');
+        }
+    });
+
+    // 反馈提交
+    document.getElementById('btn-submit-fb').addEventListener('click', () => {
+        const content = document.getElementById('fb-content').value.trim();
+        if (!content) {
+            window.showToast('请填写详细描述', 'warn');
+            return;
+        }
+        // 保存到 localStorage（mock）
+        const list = JSON.parse(localStorage.getItem('wm_feedbacks') || '[]');
+        list.push({
+            type: document.getElementById('fb-type').value,
+            priority: document.getElementById('fb-priority').value,
+            content,
+            user: window.WM_AUTH.currentUser()?.shortName || '匿名',
+            ts: Date.now()
+        });
+        localStorage.setItem('wm_feedbacks', JSON.stringify(list));
+        document.getElementById('fb-content').value = '';
+        window.showToast('✓ 反馈已提交 · 编号 FB-' + Date.now().toString().slice(-6), 'success');
+    });
+})();
+</script>
+
+<style>
+.wm-kbd { display:inline-block; padding:2px 6px; font-family:monospace; font-size:11px;
+    background:#F5F3EE; border:1px solid var(--color-border); border-radius:3px;
+    box-shadow:0 1px 0 var(--color-border); color:var(--color-text-2); }
+</style>
+</body>
+</html>

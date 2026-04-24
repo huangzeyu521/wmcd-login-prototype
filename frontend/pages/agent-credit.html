@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>信用优化智能体 - 皖美信用</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<link rel="stylesheet" href="../assets/css/shared.css?v=p3.1">
+<script src="../assets/js/shared.js?v=p3.1"></script>
+<script src="../assets/js/interactions.js?v=p3.1"></script>
+<link rel="stylesheet" href="../assets/css/mvp.css?v=p3.1">
+<link rel="stylesheet" href="../assets/css/ai.css?v=p3.1">
+<script src="../assets/js/mock-data.js?v=p3.1"></script>
+<script src="../assets/js/auth.js?v=p3.1"></script>
+<script src="../assets/js/tickets.js?v=p3.1"></script>
+<script src="../assets/js/phase2.js?v=p3.1"></script>
+<script src="../assets/js/components.js?v=p3.1"></script>
+<script src="../assets/js/ai-client.js?v=p3.1"></script>
+
+<style>
+    .credit-badge-aaa {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 68px;
+        height: 68px;
+        background: linear-gradient(135deg, #D4AF37 0%, #A8823E 50%, #8A6A2F 100%);
+        color: #FFFFFF;
+        font-family: 'Times New Roman', serif;
+        font-weight: 900;
+        font-size: 26px;
+        border-radius: 6px;
+        box-shadow: 0 6px 16px rgba(168, 130, 62, 0.35), inset 0 0 0 2px rgba(255,255,255,0.25);
+        letter-spacing: -1px;
+    }
+    .credit-score-large {
+        font-family: var(--font-num);
+        font-size: 72px;
+        font-weight: 800;
+        line-height: 1;
+        background: linear-gradient(180deg, #B8141A 0%, #8A0F14 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        letter-spacing: -3px;
+    }
+    .dim-card {
+        padding: 14px;
+        background: linear-gradient(180deg, #FAFAF7 0%, #FFFFFF 100%);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-sm);
+        transition: all 0.25s;
+    }
+    .dim-card:hover {
+        border-color: var(--color-accent);
+        transform: translateY(-1px);
+    }
+    .ai-bubble {
+        background: linear-gradient(135deg, rgba(15,42,86,0.03), rgba(184,20,26,0.02));
+        border-left: 3px solid var(--color-secondary);
+        padding: 14px 18px;
+        border-radius: 0 6px 6px 0;
+        position: relative;
+    }
+    .ai-bubble::before {
+        content: "AI";
+        position: absolute;
+        top: -10px;
+        left: 14px;
+        background: linear-gradient(135deg, #0F2A56, #B8141A);
+        color: white;
+        font-size: 10px;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 3px;
+        letter-spacing: 1px;
+    }
+    .suggestion-item {
+        display: flex;
+        gap: 12px;
+        padding: 12px;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-sm);
+        background: #FFFFFF;
+        transition: all 0.2s;
+    }
+    .suggestion-item:hover {
+        border-color: var(--color-accent);
+        box-shadow: var(--shadow-md);
+    }
+    .priority-tag {
+        width: 28px;
+        height: 28px;
+        border-radius: 3px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 11px;
+        flex-shrink: 0;
+    }
+    .priority-tag.p0 { background: linear-gradient(135deg, #B8141A, #8A0F14); color: white; }
+    .priority-tag.p1 { background: linear-gradient(135deg, #E8A33D, #B87B2B); color: white; }
+    .priority-tag.p2 { background: linear-gradient(135deg, #0F2A56, #1F4A8A); color: white; }
+    .breadcrumb { color: var(--color-text-3); font-size: 12px; }
+    .breadcrumb a { color: var(--color-secondary); text-decoration: none; }
+    .breadcrumb a:hover { color: var(--color-primary); }
+    .breadcrumb .sep { margin: 0 6px; color: var(--color-border-2); }
+</style>
+</head>
+<body class="bg-wm-bg">
+<script>if (!window.WM_AUTH || !window.WM_AUTH.guard()) throw new Error("not logged in");</script>
+
+<div id="topbar-root"></div>
+<script>document.getElementById('topbar-root').outerHTML = WM_C.renderAuthTopbar('credit');</script>
+
+<!-- 面包屑 -->
+<div class="bg-white border-b border-wm px-8 py-3">
+    <nav class="breadcrumb">
+        <a href="index.html">🏠 首页</a>
+        <span class="sep">/</span>
+        <a href="index.html">七大智能体</a>
+        <span class="sep">/</span>
+        <span style="color:var(--color-primary);font-weight:600;">🏛 国企信用优化智能体</span>
+    </nav>
+</div>
+
+<div class="flex">
+    <!-- 左侧二级导航 -->
+    <aside class="wm-sidebar" style="width:220px;min-height:calc(100vh - 120px);">
+        <div class="p-4 border-b border-wm">
+            <div class="text-xs text-wm-gray3 tracking-widest">AGENT · MODULE</div>
+            <div class="text-base font-bold text-wm-primary mt-1">信用优化智能体</div>
+            <div class="text-xs text-wm-gray mt-1">Credit Optimization</div>
+        </div>
+        <div class="py-2">
+            <div class="sb-item active">
+                <span>📊</span> 企业信用总览
+            </div>
+            <div class="sb-item">
+                <span>🎯</span> 信用画像详情
+            </div>
+            <div class="sb-item">
+                <span>📈</span> 评分趋势分析
+            </div>
+            <div class="sb-item">
+                <span>🧭</span> 同业对标分析
+            </div>
+            <div class="sb-item">
+                <span>🚀</span> 信用提升闭环
+            </div>
+            <div class="sb-item">
+                <span>🕸</span> 关联图谱
+            </div>
+            <div class="sb-item">
+                <span>📄</span> 信用报告中心
+            </div>
+            <div class="sb-item">
+                <span>⚙</span> 评级模型配置
+            </div>
+            <div class="sb-item">
+                <span>⚖</span> 评级异议处理
+            </div>
+        </div>
+        <div class="mx-3 my-4 p-3 rounded border border-wm" style="background:linear-gradient(135deg, rgba(184,20,26,0.04), rgba(201,160,99,0.04));">
+            <div class="text-xs text-wm-gray3">模型版本</div>
+            <div class="text-sm font-bold text-wm-secondary">v2.3.1</div>
+            <div class="text-xs text-wm-gray3 mt-1">2026-04-15 更新</div>
+            <div class="text-xs mt-2"><span class="wm-badge wm-badge-green">稳定运行</span></div>
+        </div>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="flex-1 p-6" style="min-width:0;">
+
+        <!-- 顶部操作栏 -->
+        <div class="flex items-center justify-between mb-5">
+            <div>
+                <div class="flex items-center gap-3 mb-1">
+                    <h1 class="text-2xl font-bold text-wm-secondary">企业信用总览</h1>
+                    <span class="wm-badge wm-badge-green">信用筑基 · 核心业务引擎</span>
+                </div>
+                <div class="text-xs text-wm-gray3">Credit Optimization Agent · 远东信用产投领域评级方法论驱动</div>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="relative">
+                    <input type="text" placeholder="搜索企业 / 统一社会信用代码" class="pl-9 pr-4 py-2 border border-wm rounded text-sm w-72 focus:outline-none focus:border-wm-primary">
+                    <svg width="16" height="16" class="absolute left-3 top-2.5 text-wm-gray3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                </div>
+                <button class="wm-btn wm-btn-ghost wm-btn-sm">🕓 历史追溯</button>
+                <button class="wm-btn wm-btn-ghost wm-btn-sm">🔗 分享授权</button>
+                <button class="wm-btn wm-btn-gold wm-btn-sm">🤖 AI解读</button>
+                <a href="ticket-new.html?type=credit" class="wm-btn wm-btn-primary wm-btn-sm" style="text-decoration:none;">＋ 发起信用评估</a>
+            </div>
+        </div>
+
+        <!-- 核心企业信用总览卡 -->
+        <div class="wm-card mb-4 wm-deco-bg">
+            <div class="p-6 grid grid-cols-12 gap-6">
+                <!-- 左：企业信息与评分 -->
+                <div class="col-span-5 border-r border-wm pr-6">
+                    <div class="flex items-start gap-4 mb-4">
+                        <div class="credit-badge-aaa">AAA</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-1">
+                                <h2 class="text-xl font-bold text-wm-secondary">安徽皖能集团有限公司</h2>
+                                <span class="wm-badge wm-badge-blue">省属</span>
+                            </div>
+                            <div class="text-xs text-wm-gray3 mb-1">统一社会信用代码：9134000014924XXXXX</div>
+                            <div class="text-xs text-wm-gray3">行业：<span class="text-wm-gray">电力、热力生产和供应业</span> · 注册资本：<span class="text-wm-gray">¥180 亿</span> · 员工：<span class="text-wm-gray">2.3万人</span></div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-end gap-6 mb-5 mt-5">
+                        <div>
+                            <div class="text-xs text-wm-gray3 mb-1">综合信用评分</div>
+                            <div class="credit-score-large">968<span class="text-2xl text-wm-gray3 ml-1">/1000</span></div>
+                        </div>
+                        <div class="flex flex-col gap-2 pb-1">
+                            <div class="flex items-center gap-2">
+                                <span class="wm-light green wm-pulse"></span>
+                                <span class="text-sm text-wm-secondary font-semibold">风险等级：低风险</span>
+                            </div>
+                            <div class="text-xs text-wm-gray3">较上月 <span class="text-emerald-600 font-semibold">↑ 12</span> · 同业对标 <span class="text-wm-primary font-semibold">第1/89</span></div>
+                            <div class="text-xs text-wm-gray3">最近评估：2026-04-18 08:32</div>
+                        </div>
+                    </div>
+
+                    <!-- 风险标签 -->
+                    <div class="flex flex-wrap gap-1.5 mb-4">
+                        <span class="wm-tag" style="background:rgba(43,147,72,0.08);color:#2B9348;border-color:#2B934855;">✓ 财务健康</span>
+                        <span class="wm-tag" style="background:rgba(43,147,72,0.08);color:#2B9348;border-color:#2B934855;">✓ 履约良好</span>
+                        <span class="wm-tag" style="background:rgba(43,147,72,0.08);color:#2B9348;border-color:#2B934855;">✓ 合规经营</span>
+                        <span class="wm-tag" style="background:rgba(201,160,99,0.1);color:#A8823E;border-color:#C9A06355;">★ 保值增值</span>
+                        <span class="wm-tag" style="background:rgba(201,160,99,0.1);color:#A8823E;border-color:#C9A06355;">★ 主责主业聚焦</span>
+                        <span class="wm-tag" style="background:rgba(201,160,99,0.1);color:#A8823E;border-color:#C9A06355;">★ ESG 优良</span>
+                        <span class="wm-tag" style="background:rgba(15,42,86,0.06);color:#0F2A56;border-color:#0F2A5655;">🏛 三重一大合规</span>
+                        <span class="wm-tag" style="background:rgba(15,42,86,0.06);color:#0F2A56;border-color:#0F2A5655;">🏛 党组织前置覆盖</span>
+                    </div>
+                </div>
+
+                <!-- 中：六维度雷达 -->
+                <div class="col-span-4 pr-4 border-r border-wm">
+                    <div class="text-sm font-bold text-wm-secondary mb-2">六维度信用评分</div>
+                    <div id="chart-radar" style="height:240px;"></div>
+                </div>
+
+                <!-- 右：仪表盘 -->
+                <div class="col-span-3">
+                    <div class="text-sm font-bold text-wm-secondary mb-2">信用健康指数</div>
+                    <div id="chart-gauge" style="height:220px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 六维度明细 -->
+        <div class="wm-card mb-4">
+            <div class="wm-card-header">
+                <h3>六维度评分明细（含国资特色指标）</h3>
+                <div class="flex items-center gap-2 text-xs text-wm-gray3">
+                    权重配置：<span class="text-wm-secondary font-semibold">国资委v2.3标准</span>
+                    <button class="text-wm-primary hover:underline">调整权重</button>
+                </div>
+            </div>
+            <div class="p-5 grid grid-cols-6 gap-3">
+                <div class="dim-card">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs text-wm-gray3">财务状况</span>
+                        <span class="wm-tag" style="font-size:10px;">权重25%</span>
+                    </div>
+                    <div class="flex items-baseline gap-1 mb-2">
+                        <span class="text-xl font-bold font-mono text-wm-primary">243</span>
+                        <span class="text-xs text-wm-gray3">/250</span>
+                    </div>
+                    <div class="wm-progress"><div style="width:97%;"></div></div>
+                    <div class="text-xs text-emerald-600 mt-2 flex items-center gap-1">↑ 4 · 偿债能力优</div>
+                </div>
+
+                <div class="dim-card">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs text-wm-gray3">履约能力</span>
+                        <span class="wm-tag" style="font-size:10px;">权重20%</span>
+                    </div>
+                    <div class="flex items-baseline gap-1 mb-2">
+                        <span class="text-xl font-bold font-mono text-wm-primary">192</span>
+                        <span class="text-xs text-wm-gray3">/200</span>
+                    </div>
+                    <div class="wm-progress"><div style="width:96%;"></div></div>
+                    <div class="text-xs text-emerald-600 mt-2 flex items-center gap-1">↑ 2 · 零违约</div>
+                </div>
+
+                <div class="dim-card">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs text-wm-gray3">合规经营</span>
+                        <span class="wm-tag" style="font-size:10px;">权重20%</span>
+                    </div>
+                    <div class="flex items-baseline gap-1 mb-2">
+                        <span class="text-xl font-bold font-mono text-wm-primary">186</span>
+                        <span class="text-xs text-wm-gray3">/200</span>
+                    </div>
+                    <div class="wm-progress"><div style="width:93%;"></div></div>
+                    <div class="text-xs text-wm-gray mt-2 flex items-center gap-1">- · 三重一大合规</div>
+                </div>
+
+                <div class="dim-card">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs text-wm-gray3">经营能力</span>
+                        <span class="wm-tag" style="font-size:10px;">权重15%</span>
+                    </div>
+                    <div class="flex items-baseline gap-1 mb-2">
+                        <span class="text-xl font-bold font-mono text-wm-primary">138</span>
+                        <span class="text-xs text-wm-gray3">/150</span>
+                    </div>
+                    <div class="wm-progress"><div style="width:92%;"></div></div>
+                    <div class="text-xs text-emerald-600 mt-2 flex items-center gap-1">↑ 3 · 主营突出</div>
+                </div>
+
+                <div class="dim-card">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs text-wm-gray3">社会信用</span>
+                        <span class="wm-tag" style="font-size:10px;">权重10%</span>
+                    </div>
+                    <div class="flex items-baseline gap-1 mb-2">
+                        <span class="text-xl font-bold font-mono text-wm-primary">92</span>
+                        <span class="text-xs text-wm-gray3">/100</span>
+                    </div>
+                    <div class="wm-progress"><div style="width:92%;"></div></div>
+                    <div class="text-xs text-emerald-600 mt-2 flex items-center gap-1">↑ 1 · ESG优良</div>
+                </div>
+
+                <div class="dim-card" style="background:linear-gradient(180deg,#FDF8EE 0%,#FFFFFF 100%);border-color:#C9A06355;">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-semibold" style="color:#A8823E;">★ 国资特色</span>
+                        <span class="wm-tag" style="font-size:10px;">权重10%</span>
+                    </div>
+                    <div class="flex items-baseline gap-1 mb-2">
+                        <span class="text-xl font-bold font-mono" style="color:#A8823E;">96</span>
+                        <span class="text-xs text-wm-gray3">/100</span>
+                    </div>
+                    <div class="wm-progress"><div style="width:96%;background:linear-gradient(90deg,#C9A063,#A8823E);"></div></div>
+                    <div class="text-xs mt-2 flex items-center gap-1" style="color:#A8823E;">↑ 2 · 保值增值突出</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第二排：趋势 + AI解读 -->
+        <div class="grid grid-cols-12 gap-4 mb-4">
+            <!-- 信用趋势 -->
+            <div class="wm-card col-span-7">
+                <div class="wm-card-header">
+                    <h3>信用评分趋势（近12月）</h3>
+                    <div class="flex gap-2">
+                        <button class="wm-btn wm-btn-ghost wm-btn-sm" style="padding:3px 10px;">12月</button>
+                        <button class="wm-btn wm-btn-primary wm-btn-sm" style="padding:3px 10px;">36月</button>
+                        <button class="wm-btn wm-btn-ghost wm-btn-sm" style="padding:3px 10px;">全部</button>
+                    </div>
+                </div>
+                <div class="p-4">
+                    <div id="chart-trend" style="height:260px;"></div>
+                </div>
+            </div>
+
+            <!-- AI 实时解读（qwen3-max-preview 驱动） -->
+            <div class="wm-card col-span-5">
+                <div class="wm-card-header">
+                    <h3>🧠 AI 实时智能解读</h3>
+                    <div class="flex items-center gap-2">
+                        <button class="wm-btn wm-btn-gold wm-btn-sm" id="btn-ai-explain" style="padding:3px 10px;">🤖 启动 AI 解读</button>
+                    </div>
+                </div>
+                <div class="p-3" id="ai-explain-panel" style="min-height:260px;">
+                    <div class="wm-empty"><div class="empty-icon">🧠</div><div class="empty-title">AI 解读待启动</div><div class="empty-desc">点击右上角按钮 · 调用 qwen3-max-preview · 含思考链可视化</div></div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+        // 绑定 AI 解读按钮
+        document.getElementById('btn-ai-explain').addEventListener('click', () => {
+            WMAI.call({
+                container: document.getElementById('ai-explain-panel'),
+                agent: 'credit',
+                function: 'credit_explain',
+                userId: (window.WM_AUTH && window.WM_AUTH.currentUser() || {}).id,
+                enterpriseId: 'E001',
+                title: 'AI 评估解读（qwen3-max-preview）',
+                context: {
+                    enterprise_name: '安徽皖能集团有限公司',
+                    rating: 'AAA',
+                    score: 968,
+                    rating_prev: 'AAA',
+                    score_delta: '+12',
+                    change_direction: '上升',
+                    dim_scores: '财务 243 / 履约 192 / 合规 186 / 经营 138 / 社会 92 / 国资特色 117',
+                },
+            });
+        });
+        </script>
+
+        <!-- 第三排：同业对标 + 关联图谱 -->
+        <div class="grid grid-cols-12 gap-4 mb-4">
+            <!-- 同业对标 -->
+            <div class="wm-card col-span-5">
+                <div class="wm-card-header">
+                    <h3>同业对标分析</h3>
+                    <div class="flex gap-2">
+                        <span class="wm-tag">同省属</span>
+                        <span class="wm-tag">同行业</span>
+                        <span class="wm-tag">同规模</span>
+                    </div>
+                </div>
+                <div class="p-4">
+                    <div id="chart-peer" style="height:260px;"></div>
+                </div>
+            </div>
+
+            <!-- 信用提升建议 -->
+            <div class="wm-card col-span-7">
+                <div class="wm-card-header">
+                    <h3>AI 信用提升闭环建议</h3>
+                    <div class="flex items-center gap-2 text-xs">
+                        <span class="text-wm-gray3">采纳预估提升：</span>
+                        <span class="font-mono font-bold text-wm-primary">+ 15 分</span>
+                        <span class="wm-badge wm-badge-red">待采纳 3 项</span>
+                        <button class="wm-btn wm-btn-gold wm-btn-sm ml-2" id="btn-ai-regen" style="padding:2px 10px;">🤖 AI 重新生成</button>
+                    </div>
+                </div>
+                <div id="ai-suggestions-panel" style="display:none;padding:4px;"></div>
+                <script>
+                document.getElementById('btn-ai-regen').addEventListener('click', () => {
+                    const panel = document.getElementById('ai-suggestions-panel');
+                    panel.style.display = 'block';
+                    WMAI.call({
+                        container: panel,
+                        agent: 'credit',
+                        function: 'credit_suggestions',
+                        userId: (window.WM_AUTH && window.WM_AUTH.currentUser() || {}).id,
+                        enterpriseId: 'E001',
+                        title: 'AI 提升方案（qwen3-max-preview）',
+                        context: {
+                            enterprise_name: '安徽皖能集团有限公司',
+                            current_rating: 'AAA', current_score: 968,
+                            target_rating: 'AAA（冲刺 985+）',
+                            weak_dimensions: '短债占比偏高 · 直接融资占比偏低 · 新机组合规待补齐',
+                            industry: '电力、热力生产和供应业',
+                            company_type: '省属',
+                        },
+                    });
+                });
+                </script>
+                <div class="p-4 space-y-3">
+                    <div class="suggestion-item">
+                        <div class="priority-tag p0">P0</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="font-semibold text-wm-secondary text-sm">优化子公司合规管理，补齐环保合规短板</span>
+                                <span class="font-mono text-wm-primary font-bold text-sm">+ 6 分</span>
+                            </div>
+                            <div class="text-xs text-wm-gray leading-relaxed">
+                                针对新投产的2个机组，补齐环境影响评价文件与排污许可证的最新验证；建立子公司环保合规台账并对接省国资委监管系统。
+                            </div>
+                            <div class="mt-2 flex items-center gap-3 text-xs text-wm-gray3">
+                                <span>👤 责任部门：法务合规部</span>
+                                <span>⏱ 预计耗时：30日</span>
+                                <span>📊 难度：中</span>
+                                <button class="ml-auto wm-btn wm-btn-primary wm-btn-sm" style="padding:2px 10px;">采纳并分派</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="suggestion-item">
+                        <div class="priority-tag p1">P1</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="font-semibold text-wm-secondary text-sm">优化债务期限结构，降低短债占比至50%以下</span>
+                                <span class="font-mono text-wm-primary font-bold text-sm">+ 5 分</span>
+                            </div>
+                            <div class="text-xs text-wm-gray leading-relaxed">
+                                当前短期债务占比58.3%，建议通过发行5-7年期公司债置换，并联动<a href="agent-financing.html" class="text-wm-primary hover:underline">融资支持智能体</a>匹配低成本品种。
+                            </div>
+                            <div class="mt-2 flex items-center gap-3 text-xs text-wm-gray3">
+                                <span>👤 责任部门：财务部</span>
+                                <span>⏱ 预计耗时：60日</span>
+                                <span>📊 难度：中</span>
+                                <button class="ml-auto wm-btn wm-btn-primary wm-btn-sm" style="padding:2px 10px;">采纳并分派</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="suggestion-item">
+                        <div class="priority-tag p2">P2</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="font-semibold text-wm-secondary text-sm">推进绿色转型项目，强化ESG评级至AA+</span>
+                                <span class="font-mono text-wm-primary font-bold text-sm">+ 4 分</span>
+                            </div>
+                            <div class="text-xs text-wm-gray leading-relaxed">
+                                建议申报省级零碳园区试点，发行绿色债券≥20亿元，结合<a href="agent-assets.html" class="text-wm-primary hover:underline">三资盘活智能体</a>开展碳资产ABS设计。
+                            </div>
+                            <div class="mt-2 flex items-center gap-3 text-xs text-wm-gray3">
+                                <span>👤 责任部门：战略发展部</span>
+                                <span>⏱ 预计耗时：90日</span>
+                                <span>📊 难度：高</span>
+                                <button class="ml-auto wm-btn wm-btn-primary wm-btn-sm" style="padding:2px 10px;">采纳并分派</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-center pt-2 text-xs">
+                        <a href="#" class="text-wm-primary hover:underline">查看全部 8 条建议 →</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第四排：关联图谱 + 历史评估 -->
+        <div class="grid grid-cols-12 gap-4">
+            <div class="wm-card col-span-8">
+                <div class="wm-card-header">
+                    <h3>企业关联图谱 · 穿透视图</h3>
+                    <div class="flex gap-2">
+                        <button class="wm-btn wm-btn-ghost wm-btn-sm" style="padding:3px 10px;">股权穿透</button>
+                        <button class="wm-btn wm-btn-primary wm-btn-sm" style="padding:3px 10px;">担保关系</button>
+                        <button class="wm-btn wm-btn-ghost wm-btn-sm" style="padding:3px 10px;">供应链</button>
+                    </div>
+                </div>
+                <div class="p-4">
+                    <div id="chart-graph" style="height:320px;"></div>
+                </div>
+            </div>
+
+            <div class="wm-card col-span-4">
+                <div class="wm-card-header">
+                    <h3>历史评估记录</h3>
+                    <button class="text-xs text-wm-gray3 hover:text-wm-primary">全部 →</button>
+                </div>
+                <div class="p-4" style="max-height:360px;overflow-y:auto;">
+                    <table class="wm-table">
+                        <thead>
+                            <tr><th>评估时间</th><th>得分</th><th>等级</th></tr>
+                        </thead>
+                        <tbody id="history-rows"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== P0-05 · 信用异议申请模块（依据设计文档 6.1.4(11) 异议处理流程） ===== -->
+        <div class="wm-section-title mt-6">
+            <h2>⚖️ 评级异议申请（合规渠道）</h2>
+            <span class="sub">依据《国企信用评级管理办法》· 企业对评级结果有异议可发起复核</span>
+        </div>
+        <div class="wm-card">
+            <div class="wm-card-header">
+                <h3>📋 异议申请列表</h3>
+                <button class="wm-btn wm-btn-primary wm-btn-sm" id="btn-new-dispute">+ 发起异议申请</button>
+            </div>
+            <div class="p-4" id="dispute-list">
+                <div class="text-center text-wm-gray3 py-6 text-sm">暂无异议记录</div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- ===== 异议申请浮层 ===== -->
+<div id="dispute-modal" class="wm-modal-mask" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);z-index:999;align-items:center;justify-content:center;">
+    <div style="background:#FFF;border-radius:8px;width:640px;max-width:92%;max-height:85vh;overflow-y:auto;box-shadow:0 25px 60px rgba(0,0,0,0.25);">
+        <div class="p-5 border-b flex items-center justify-between" style="border-color:var(--color-border);">
+            <div>
+                <h3 class="text-lg font-bold text-wm-secondary">⚖️ 发起评级异议申请</h3>
+                <div class="text-xs text-wm-gray3 mt-0.5">专家复核周期：10 个工作日 · 复核结果具法律效力</div>
+            </div>
+            <button class="wm-btn wm-btn-ghost wm-btn-xs" id="btn-close-dispute">✕</button>
+        </div>
+        <div class="p-5 space-y-4">
+            <div class="p-3 rounded" style="background:rgba(232,163,61,0.08);border-left:3px solid var(--color-warning);font-size:12px;line-height:1.8;">
+                <strong>合规提示：</strong>异议申请将记录审计留痕，任何虚假陈述需承担法律责任。请确保提供真实证据材料。
+            </div>
+
+            <div>
+                <label class="wm-form-label">异议类型 <span class="text-wm-danger">*</span></label>
+                <select class="wm-input" id="dispute-type">
+                    <option value="score">对综合评分有异议</option>
+                    <option value="grade">对信用等级有异议</option>
+                    <option value="indicator">对单项指标有异议</option>
+                    <option value="other">其他</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="wm-form-label">异议理由 <span class="text-wm-danger">*</span></label>
+                <textarea class="wm-input" id="dispute-reason" rows="4" placeholder="请详细说明对评级结果有异议的具体依据，如：某指标数据来源不准确、某事件已处置完结但仍计入风险等…"></textarea>
+            </div>
+
+            <div>
+                <label class="wm-form-label">建议调整方向</label>
+                <div class="flex gap-3">
+                    <label class="wm-radio"><input type="radio" name="dispute-dir" value="up" checked><span>建议上调</span></label>
+                    <label class="wm-radio"><input type="radio" name="dispute-dir" value="down"><span>建议下调</span></label>
+                    <label class="wm-radio"><input type="radio" name="dispute-dir" value="hold"><span>维持但修正依据</span></label>
+                </div>
+            </div>
+
+            <div>
+                <label class="wm-form-label">证据材料（可选）</label>
+                <div class="p-4 border border-dashed rounded text-center text-wm-gray3 text-sm" style="border-color:var(--color-border);">
+                    📎 拖拽或点击上传 · 支持 PDF / Word / Excel · 单文件 ≤ 20MB
+                    <input type="file" multiple style="display:none;" id="dispute-files">
+                    <button class="wm-btn wm-btn-ghost wm-btn-xs mt-2" type="button" onclick="document.getElementById('dispute-files').click()">选择文件</button>
+                    <div id="dispute-files-list" class="text-xs mt-2 text-left"></div>
+                </div>
+            </div>
+
+            <div>
+                <label class="wm-form-label">联系方式</label>
+                <input class="wm-input" id="dispute-contact" placeholder="便于复核专家回复的手机/邮箱">
+            </div>
+        </div>
+        <div class="p-5 border-t flex items-center justify-end gap-2" style="border-color:var(--color-border);background:#FAFAF7;">
+            <button class="wm-btn wm-btn-ghost wm-btn-sm" id="btn-cancel-dispute">取消</button>
+            <button class="wm-btn wm-btn-primary wm-btn-sm" id="btn-submit-dispute">提交异议申请</button>
+        </div>
+    </div>
+</div>
+
+<div id="footer-root"></div>
+<script>document.getElementById('footer-root').outerHTML = renderFooter();</script>
+
+<script>
+// ===== 六维雷达 =====
+(function(){
+    const chart = echarts.init(document.getElementById('chart-radar'));
+    chart.setOption({
+        tooltip: {},
+        radar: {
+            indicator: [
+                { name: '财务状况', max: 250 },
+                { name: '履约能力', max: 200 },
+                { name: '合规经营', max: 200 },
+                { name: '经营能力', max: 150 },
+                { name: '社会信用', max: 100 },
+                { name: '国资特色', max: 100 }
+            ],
+            radius: '65%',
+            splitArea: { areaStyle: { color: ['rgba(201,160,99,0.03)', 'rgba(15,42,86,0.02)'] } },
+            axisName: { color: '#4A4A4A', fontSize: 11, fontWeight: 600 },
+            splitLine: { lineStyle: { color: '#D4CEB8' } }
+        },
+        series: [{
+            type: 'radar',
+            data: [
+                { value: [243, 192, 186, 138, 92, 96], name: '本期',
+                  areaStyle: { color: 'rgba(184, 20, 26, 0.2)' },
+                  lineStyle: { color: '#B8141A', width: 2 },
+                  itemStyle: { color: '#B8141A' } },
+                { value: [239, 190, 186, 135, 91, 94], name: '上期',
+                  areaStyle: { color: 'rgba(201, 160, 99, 0.1)' },
+                  lineStyle: { color: '#C9A063', type: 'dashed' },
+                  itemStyle: { color: '#C9A063' } }
+            ]
+        }]
+    });
+    window.addEventListener('resize', () => chart.resize());
+})();
+
+// ===== 仪表盘 =====
+(function(){
+    const chart = echarts.init(document.getElementById('chart-gauge'));
+    chart.setOption({
+        series: [{
+            type: 'gauge',
+            startAngle: 210, endAngle: -30,
+            min: 0, max: 100,
+            radius: '85%',
+            progress: { show: true, width: 14, itemStyle: { color: '#B8141A' } },
+            axisLine: { lineStyle: { width: 14, color: [[0.3,'#D64045'],[0.6,'#E8A33D'],[0.85,'#C9A063'],[1,'#2B9348']] } },
+            pointer: { show: false },
+            axisTick: { show: false },
+            splitLine: { show: false },
+            axisLabel: { show: false },
+            anchor: { show: false },
+            title: { show: false },
+            detail: {
+                valueAnimation: true,
+                formatter: '{value}',
+                color: '#B8141A',
+                fontSize: 36,
+                fontWeight: 800,
+                fontFamily: 'Inter, monospace',
+                offsetCenter: [0, 0]
+            },
+            data: [{ value: 96.8 }]
+        }]
+    });
+    // 在仪表盘下方添加文字
+    chart.setOption({
+        graphic: [
+            {type:'text', left:'center', bottom:'25%', style:{text:'健康指数', fill:'#7A7A7A', fontSize:12, textAlign:'center'}},
+            {type:'text', left:'center', bottom:'15%', style:{text:'行业前 2% · 省属第1', fill:'#4A4A4A', fontSize:11, fontWeight:600, textAlign:'center'}}
+        ]
+    });
+    window.addEventListener('resize', () => chart.resize());
+})();
+
+// ===== 信用趋势 =====
+(function(){
+    const chart = echarts.init(document.getElementById('chart-trend'));
+    const months = ['4月','5月','6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月'];
+    const scores = [935, 938, 942, 945, 948, 951, 954, 958, 960, 962, 964, 956, 968];
+    const markers = [
+        { name:'发行绿色债券', xAxis:'7月', value:945 },
+        { name:'完成混改', xAxis:'11月', value:958 },
+        { name:'新机组投产', xAxis:'2月', value:956 }
+    ];
+    chart.setOption({
+        tooltip: { trigger: 'axis' },
+        grid: { top: 30, right: 20, bottom: 30, left: 45 },
+        xAxis: { type: 'category', boundaryGap: false, data: months, axisLine:{ lineStyle:{ color:'#D4CEB8' }}, axisLabel:{ color:'#7A7A7A' } },
+        yAxis: { type: 'value', min: 900, max: 1000, splitLine:{ lineStyle:{ color:'#E5E1D6', type:'dashed' }}, axisLabel:{ color:'#7A7A7A' } },
+        visualMap: {
+            show: false,
+            pieces: [
+                { gt: 900, lte: 800, color: '#D64045' },
+                { gt: 800, lte: 900, color: '#C9A063' },
+                { gt: 900, lte: 1000, color: '#2B9348' }
+            ]
+        },
+        series: [{
+            type: 'line', smooth: true, data: scores, symbol: 'circle', symbolSize: 7,
+            lineStyle: { color: '#B8141A', width: 3 },
+            itemStyle: { color: '#B8141A', borderWidth: 2, borderColor: '#FFFFFF' },
+            areaStyle: { color: { type:'linear', x:0, y:0, x2:0, y2:1, colorStops:[
+                { offset:0, color:'rgba(184, 20, 26, 0.25)' },
+                { offset:1, color:'rgba(184, 20, 26, 0)' }
+            ]}},
+            markPoint: {
+                symbol: 'pin', symbolSize: 38,
+                itemStyle: { color: '#C9A063' },
+                label: { formatter: '★', fontSize: 12 },
+                data: markers.map(m => ({ name: m.name, xAxis: m.xAxis, yAxis: m.value }))
+            },
+            markLine: {
+                silent: true, symbol: 'none', lineStyle: { color: '#D64045', type: 'dashed', width: 1 },
+                data: [{ yAxis: 900, label: { formatter: 'AA线' }}]
+            }
+        }]
+    });
+    window.addEventListener('resize', () => chart.resize());
+})();
+
+// ===== 同业对标 =====
+(function(){
+    const chart = echarts.init(document.getElementById('chart-peer'));
+    chart.setOption({
+        tooltip: { trigger: 'axis', axisPointer: { type:'shadow' } },
+        legend: { data: ['本企业','同业均值','同业最高'], top: 0, textStyle: { fontSize: 11 } },
+        grid: { top: 32, right: 10, bottom: 20, left: 70 },
+        xAxis: { type: 'value', max: 250, axisLabel:{ color:'#7A7A7A' }, splitLine:{ lineStyle:{ color:'#E5E1D6', type:'dashed' }} },
+        yAxis: {
+            type: 'category', inverse: true,
+            data: ['财务状况','履约能力','合规经营','经营能力','社会信用','国资特色'],
+            axisLabel: { color: '#4A4A4A' }, axisLine: { show: false }, axisTick: { show: false }
+        },
+        series: [
+            { name:'本企业', type:'bar', data:[243,192,186,138,92,96], barWidth: 10, itemStyle:{ color:'#B8141A', borderRadius:[0,3,3,0] } },
+            { name:'同业均值', type:'bar', data:[218,175,168,128,84,82], barWidth: 10, itemStyle:{ color:'#C9A063', borderRadius:[0,3,3,0] } },
+            { name:'同业最高', type:'bar', data:[248,198,196,148,98,98], barWidth: 10, itemStyle:{ color:'#0F2A56', borderRadius:[0,3,3,0] } }
+        ]
+    });
+    window.addEventListener('resize', () => chart.resize());
+})();
+
+// ===== 关联图谱 =====
+(function(){
+    const chart = echarts.init(document.getElementById('chart-graph'));
+    const nodes = [
+        { name:'皖能集团', symbolSize: 60, category: 0, x: 400, y: 160, fixed: true, label:{show:true,fontWeight:700} },
+        { name:'皖能电力', symbolSize: 40, category: 1, x: 260, y: 80 },
+        { name:'皖能煤业', symbolSize: 40, category: 1, x: 250, y: 250 },
+        { name:'皖能环保', symbolSize: 36, category: 1, x: 550, y: 80 },
+        { name:'皖能新能源', symbolSize: 44, category: 1, x: 560, y: 240 },
+        { name:'工商银行', symbolSize: 28, category: 2, x: 100, y: 160 },
+        { name:'建设银行', symbolSize: 26, category: 2, x: 140, y: 280 },
+        { name:'徽商银行', symbolSize: 28, category: 2, x: 150, y: 50 },
+        { name:'海螺集团', symbolSize: 34, category: 3, x: 680, y: 160 },
+        { name:'江汽集团', symbolSize: 30, category: 3, x: 650, y: 350 }
+    ];
+    const links = [
+        {source:'皖能集团', target:'皖能电力', lineStyle:{color:'#B8141A'}},
+        {source:'皖能集团', target:'皖能煤业', lineStyle:{color:'#B8141A'}},
+        {source:'皖能集团', target:'皖能环保', lineStyle:{color:'#B8141A'}},
+        {source:'皖能集团', target:'皖能新能源', lineStyle:{color:'#B8141A'}},
+        {source:'皖能集团', target:'工商银行', lineStyle:{color:'#0F2A56',type:'dashed'}},
+        {source:'皖能集团', target:'建设银行', lineStyle:{color:'#0F2A56',type:'dashed'}},
+        {source:'皖能集团', target:'徽商银行', lineStyle:{color:'#0F2A56',type:'dashed'}},
+        {source:'皖能集团', target:'海螺集团', lineStyle:{color:'#C9A063',type:'dashed'}},
+        {source:'皖能集团', target:'江汽集团', lineStyle:{color:'#C9A063',type:'dashed'}},
+    ];
+    chart.setOption({
+        tooltip: {},
+        legend: { data:['集团主体','子公司','合作银行','关联国企'], bottom: 0, textStyle:{fontSize:11}},
+        series: [{
+            type:'graph',
+            layout: 'none',
+            categories: [
+                { name:'集团主体', itemStyle:{color:'#B8141A'} },
+                { name:'子公司', itemStyle:{color:'#0F2A56'} },
+                { name:'合作银行', itemStyle:{color:'#C9A063'} },
+                { name:'关联国企', itemStyle:{color:'#2B9348'} }
+            ],
+            roam: true,
+            label: { show: true, position: 'bottom', fontSize: 11 },
+            force: { repulsion: 100 },
+            edgeSymbol: ['none','arrow'], edgeSymbolSize: 6,
+            data: nodes, links: links,
+            lineStyle: { width: 1.5 }
+        }]
+    });
+    window.addEventListener('resize', () => chart.resize());
+})();
+
+// ===== 历史评估列表 =====
+(function(){
+    const data = [
+        { d: '2026-04-18', s: 968, l: 'AAA' },
+        { d: '2026-03-18', s: 956, l: 'AAA' },
+        { d: '2026-02-18', s: 964, l: 'AAA' },
+        { d: '2026-01-18', s: 962, l: 'AAA' },
+        { d: '2025-12-18', s: 960, l: 'AAA' },
+        { d: '2025-11-18', s: 958, l: 'AAA' },
+        { d: '2025-10-18', s: 954, l: 'AAA' },
+        { d: '2025-09-18', s: 951, l: 'AAA' },
+        { d: '2025-08-18', s: 948, l: 'AA'  },
+        { d: '2025-07-18', s: 945, l: 'AA'  },
+        { d: '2025-06-18', s: 942, l: 'AA'  },
+        { d: '2025-05-18', s: 938, l: 'AA'  }
+    ];
+    const el = document.getElementById('history-rows');
+    el.innerHTML = data.map(d => {
+        const isAAA = d.l === 'AAA';
+        return `<tr>
+            <td style="font-family:monospace;">${d.d}</td>
+            <td class="font-bold" style="color:${isAAA?'#B8141A':'#0F2A56'};font-family:monospace;">${d.s}</td>
+            <td><span class="wm-badge ${isAAA?'wm-badge-aaa':'wm-badge-blue'}">${d.l}</span></td>
+        </tr>`;
+    }).join('');
+})();
+
+// ===== 数字渐入动画 =====
+window.addEventListener('load', () => {
+    // 信用评分动画
+    const score = document.querySelector('.credit-score-large');
+    if (score) {
+        const original = score.innerHTML;
+        score.innerHTML = '<span id="score-num">0</span><span class="text-2xl text-wm-gray3 ml-1">/1000</span>';
+        animateNumber(document.getElementById('score-num'), 968, 1800);
+    }
+});
+</script>
+
+<script>if (window.WM_C && window.WM_C.bindRoleSwitcher) WM_C.bindRoleSwitcher();</script>
+
+<!-- ===== P0-05 · 信用评级异议申请模块 JS ===== -->
+<script>
+(function () {
+    'use strict';
+    const DKEY = 'wm_disputes_v1';
+    const modal = document.getElementById('dispute-modal');
+    const listEl = document.getElementById('dispute-list');
+
+    function load() {
+        try { return JSON.parse(localStorage.getItem(DKEY) || '[]'); }
+        catch (e) { return []; }
+    }
+    function save(list) { localStorage.setItem(DKEY, JSON.stringify(list)); }
+
+    const STATUS = {
+        pending:   { label: '待受理',   cls: 'wm-badge-warning',  color: '#E8A33D' },
+        reviewing: { label: '复核中',   cls: 'wm-badge-blue',     color: '#0F2A56' },
+        adjusted:  { label: '已调整',   cls: 'wm-badge-success',  color: '#2B9348' },
+        rejected:  { label: '驳回',     cls: 'wm-badge-danger',   color: '#D64045' }
+    };
+
+    function renderList() {
+        const list = load();
+        if (list.length === 0) {
+            listEl.innerHTML = '<div class="text-center text-wm-gray3 py-6 text-sm">暂无异议记录 · 如对评级结果有异议，请点击右上角「发起异议申请」</div>';
+            return;
+        }
+        listEl.innerHTML = `
+            <table class="wm-table w-full text-sm">
+                <thead>
+                    <tr>
+                        <th>申请编号</th><th>异议类型</th><th>建议方向</th><th>提交时间</th><th>状态</th><th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${list.slice().reverse().map(d => {
+                        const st = STATUS[d.status] || STATUS.pending;
+                        const typeMap = { score: '综合评分', grade: '信用等级', indicator: '单项指标', other: '其他' };
+                        const dirMap = { up: '⬆ 上调', down: '⬇ 下调', hold: '⚖ 维持修正' };
+                        return `<tr>
+                            <td class="font-mono text-xs">${window.WM_C.escapeHtml(d.id)}</td>
+                            <td>${typeMap[d.type] || d.type}</td>
+                            <td>${dirMap[d.dir] || d.dir}</td>
+                            <td class="text-xs">${new Date(d.ts).toLocaleString('zh-CN')}</td>
+                            <td><span class="wm-badge ${st.cls}" style="background:${st.color}15;color:${st.color};border-color:${st.color}55;">${st.label}</span></td>
+                            <td><button class="wm-btn wm-btn-ghost wm-btn-xs" data-view="${d.id}">详情</button></td>
+                        </tr>`;
+                    }).join('')}
+                </tbody>
+            </table>
+        `;
+        listEl.querySelectorAll('[data-view]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = btn.getAttribute('data-view');
+                const item = load().find(x => x.id === id);
+                if (!item) return;
+                alert(
+                    '异议申请详情\n\n' +
+                    '编号：' + item.id + '\n' +
+                    '类型：' + item.type + '\n' +
+                    '理由：' + item.reason + '\n' +
+                    '状态：' + (STATUS[item.status]?.label || item.status) + '\n' +
+                    '提交时间：' + new Date(item.ts).toLocaleString('zh-CN') +
+                    (item.reviewNote ? '\n\n专家复核意见：\n' + item.reviewNote : '')
+                );
+            });
+        });
+    }
+    renderList();
+
+    function openModal() {
+        modal.style.display = 'flex';
+        document.getElementById('dispute-reason').value = '';
+        document.getElementById('dispute-contact').value = '';
+        document.getElementById('dispute-files-list').innerHTML = '';
+    }
+    function closeModal() { modal.style.display = 'none'; }
+
+    document.getElementById('btn-new-dispute').addEventListener('click', openModal);
+    document.getElementById('btn-close-dispute').addEventListener('click', closeModal);
+    document.getElementById('btn-cancel-dispute').addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+    document.getElementById('dispute-files').addEventListener('change', (e) => {
+        const list = Array.from(e.target.files || []);
+        document.getElementById('dispute-files-list').innerHTML = list.map(f =>
+            `<div class="flex items-center gap-2 py-1"><span>📎</span><span>${window.WM_C.escapeHtml(f.name)}</span><span class="text-wm-gray3">(${(f.size/1024).toFixed(1)}KB)</span></div>`
+        ).join('');
+    });
+
+    document.getElementById('btn-submit-dispute').addEventListener('click', () => {
+        const reason = document.getElementById('dispute-reason').value.trim();
+        if (!reason) { window.showToast('请填写异议理由', 'warn'); return; }
+        if (reason.length < 15) { window.showToast('理由请至少 15 字，便于专家复核', 'warn'); return; }
+
+        const list = load();
+        const id = 'DS-' + new Date().getFullYear() + '-' + String(list.length + 1).padStart(4, '0');
+        const user = window.WM_AUTH.currentUser() || {};
+        list.push({
+            id,
+            type: document.getElementById('dispute-type').value,
+            reason,
+            dir: (document.querySelector('input[name="dispute-dir"]:checked') || {}).value || 'up',
+            contact: document.getElementById('dispute-contact').value.trim(),
+            status: 'pending',
+            submitter: user.shortName || '匿名',
+            ts: Date.now()
+        });
+        save(list);
+        closeModal();
+        renderList();
+        window.showToast('✓ 异议申请已提交 · 编号 ' + id + ' · 预计 10 个工作日内复核', 'success');
+    });
+})();
+</script>
+</body>
+</html>

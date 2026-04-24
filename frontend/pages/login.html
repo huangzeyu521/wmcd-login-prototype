@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark" data-stage="SEALED">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="皖美信用 · 安徽省国资国企智能体平台 · 统一身份认证登录">
+<meta name="theme-color" content="#0D1119">
+<title>登录 · 皖美信用 · 安徽省国资国企智能体平台</title>
+
+<!-- 共享样式（全局 WMCD 基础） -->
+<link rel="stylesheet" href="../assets/css/shared.css?v=p3.1">
+<!-- 登录页专属样式（融合设计 · V5 · 资深设计师优化） -->
+<link rel="stylesheet" href="../assets/css/login-wmcd.css?v=wmcd7">
+
+<!-- GSAP 动画（CDN） -->
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" defer></script>
+
+<!-- 共享数据与认证 -->
+<script src="../assets/js/shared.js?v=p3.1" defer></script>
+<script src="../assets/js/mock-data.js?v=wmcd7" defer></script>
+<script src="../assets/js/auth.js?v=p3.1" defer></script>
+
+<!-- 本页专属 JS -->
+<script src="../assets/js/wm-lamp-svg.js?v=wmcd4" defer></script>
+<script src="../assets/js/login-wmcd.js?v=wmcd7b" defer></script>
+</head>
+<body class="wm-login-page">
+
+<!-- 环境光晕（段6 呼吸照映） -->
+<div class="wm-ambient-glow" aria-hidden="true"></div>
+
+<!-- 大字水印（启封后极淡呈现） -->
+<div class="wm-watermark" aria-hidden="true">皖美信用</div>
+
+<div class="wm-login-root">
+
+    <!-- ========== 1. 顶部锚定（80px） ========== -->
+    <header class="wm-login-header" role="banner">
+        <a href="index.html" class="wm-brand" aria-label="皖美信用 · 返回门户首页">
+            <span class="wm-brand-mark">皖</span>
+            <span>
+                <span class="wm-brand-text">皖美信用</span>
+                <span class="wm-brand-sub">ANHUI · WAN-MEI CREDIT · 省国资委主管</span>
+            </span>
+        </a>
+        <nav class="wm-header-actions" aria-label="顶部快捷通道">
+            <a href="#" class="wm-chip" data-action="auth-sso" title="政务网统一身份认证">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 12h6M9 16h6"/></svg>
+                政务网 SSO
+            </a>
+            <a href="#" class="wm-chip" data-action="auth-ca" title="CA 证书登录">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                CA 证书
+            </a>
+            <a href="#" class="wm-chip" data-action="skip-ritual" title="跳过仪式 · 直接登录">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 17l5-5-5-5M6 17l5-5-5-5"/></svg>
+                直接登录
+            </a>
+            <button class="wm-chip" data-action="toggle-theme" aria-label="切换皖墨/皖白主题">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>
+                <span class="wm-theme-label">皖墨</span>
+            </button>
+        </nav>
+    </header>
+
+    <!-- ========== 2. 主舞台 ========== -->
+    <main class="wm-login-main" role="main">
+
+        <!-- 左侧 · 皖韵长明灯舞台 -->
+        <section class="wm-seal-stage" aria-label="皖韵长明灯交互区">
+            <div class="wm-seal-wrap">
+                <!-- 长明灯 SVG 由 JS 注入 -->
+                <div id="wm-seal-host" class="wm-seal-host"></div>
+
+                <!-- V7 · 灯下验印 · 立体印章（白文篆刻 + 锦盒台座） -->
+                <div class="wm-desk-stamp" id="wm-desk-stamp" aria-hidden="true">
+                    <svg viewBox="0 0 120 170" width="100%" height="100%">
+                        <defs>
+                            <!-- 木柄顶段（栗木色 · 带高光） -->
+                            <linearGradient id="stampWood" x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%"   stop-color="#2E1A10"/>
+                                <stop offset="25%"  stop-color="#5A3820"/>
+                                <stop offset="50%"  stop-color="#8A5834"/>
+                                <stop offset="75%"  stop-color="#4A2E1A"/>
+                                <stop offset="100%" stop-color="#1E100A"/>
+                            </linearGradient>
+                            <!-- 木柄顶盖 -->
+                            <linearGradient id="stampWoodTop" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%"  stop-color="#8A5834"/>
+                                <stop offset="100%" stop-color="#4A2E1A"/>
+                            </linearGradient>
+                            <!-- 黄铜套环 -->
+                            <linearGradient id="stampBrass" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%"  stop-color="#6B5020"/>
+                                <stop offset="40%" stop-color="#F5D68E"/>
+                                <stop offset="65%" stop-color="#D4AD68"/>
+                                <stop offset="100%" stop-color="#5A421A"/>
+                            </linearGradient>
+                            <!-- 印身未启封（深铁色） -->
+                            <linearGradient id="stampBodyOff" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%"  stop-color="#2A1C18"/>
+                                <stop offset="50%" stop-color="#1B110D"/>
+                                <stop offset="100%" stop-color="#0A0604"/>
+                            </linearGradient>
+                            <!-- 印身启封（朱泥 + 立体感） -->
+                            <linearGradient id="stampBodyOn" x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%"   stop-color="#7A0F13"/>
+                                <stop offset="30%"  stop-color="#B8141A"/>
+                                <stop offset="60%"  stop-color="#A0141A"/>
+                                <stop offset="100%" stop-color="#5A0B10"/>
+                            </linearGradient>
+                            <!-- 印身侧面阴影（立体厚度） -->
+                            <linearGradient id="stampBodySide" x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%"  stop-color="rgba(0,0,0,0.55)"/>
+                                <stop offset="100%" stop-color="rgba(0,0,0,0.15)"/>
+                            </linearGradient>
+                            <!-- 印章受光晕 -->
+                            <radialGradient id="stampGlow" cx="50%" cy="45%" r="60%">
+                                <stop offset="0%"  stop-color="rgba(249,200,122,0.55)"/>
+                                <stop offset="55%" stop-color="rgba(201,160,99,0.18)"/>
+                                <stop offset="100%" stop-color="rgba(201,160,99,0)"/>
+                            </radialGradient>
+                            <!-- 锦盒台座 -->
+                            <linearGradient id="stampBase" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%"  stop-color="#2A1F18"/>
+                                <stop offset="60%" stop-color="#1E150E"/>
+                                <stop offset="100%" stop-color="#0E0806"/>
+                            </linearGradient>
+                        </defs>
+
+                        <!-- 受光晕（启封显现） -->
+                        <ellipse class="stamp-halo" cx="60" cy="85" rx="58" ry="72" fill="url(#stampGlow)" opacity="0"/>
+
+                        <!-- 桌面投影 -->
+                        <ellipse class="stamp-shadow" cx="60" cy="166" rx="42" ry="4.5" fill="rgba(0,0,0,0.72)"/>
+
+                        <!-- ========== 锦盒台座（印章坐落的朱砂锦盒） ========== -->
+                        <g class="stamp-base">
+                            <!-- 盒体主体 -->
+                            <rect x="14" y="142" width="92" height="20" rx="2" fill="url(#stampBase)" stroke="#3A2A1A" stroke-width="0.5"/>
+                            <!-- 顶面细边（金） -->
+                            <rect x="14" y="142" width="92" height="2.5" fill="url(#stampBrass)" opacity="0.6"/>
+                            <!-- 侧沿高光 -->
+                            <line x1="14" y1="145" x2="14" y2="160" stroke="rgba(245,214,142,0.12)" stroke-width="0.6"/>
+                            <line x1="106" y1="145" x2="106" y2="160" stroke="rgba(245,214,142,0.12)" stroke-width="0.6"/>
+                            <!-- 盒底金纹装饰（如意纹微意） -->
+                            <path d="M 20 155 L 28 152 L 36 155 L 44 152 L 52 155 L 60 152 L 68 155 L 76 152 L 84 155 L 92 152 L 100 155"
+                                  fill="none" stroke="url(#stampBrass)" stroke-width="0.5" opacity="0.4"/>
+                        </g>
+
+                        <!-- ========== 印身（立体方章 · 带侧面厚度） ========== -->
+                        <!-- 侧面阴影（右侧偏后，营造立体） -->
+                        <path class="stamp-body-side"
+                              d="M 88 58 L 94 62 L 94 138 L 88 142 Z"
+                              fill="url(#stampBodySide)" opacity="0.85"/>
+                        <!-- 顶面小斜（透视） -->
+                        <path class="stamp-body-top"
+                              d="M 28 58 L 88 58 L 94 62 L 34 62 Z"
+                              fill="rgba(255,255,255,0.05)" stroke="rgba(201,160,99,0.2)" stroke-width="0.4"/>
+
+                        <!-- 主印身前面（大方块） -->
+                        <g class="stamp-body">
+                            <rect class="stamp-body-off"
+                                  x="28" y="58" width="60" height="84" rx="1.5"
+                                  fill="url(#stampBodyOff)"
+                                  stroke="#3A2818" stroke-width="0.8"/>
+                            <rect class="stamp-body-on"
+                                  x="28" y="58" width="60" height="84" rx="1.5"
+                                  fill="url(#stampBodyOn)"
+                                  stroke="#E8C07A" stroke-width="1"
+                                  opacity="0"/>
+
+                            <!-- 印面内边框（双框 · 篆刻典型样式） -->
+                            <rect class="stamp-frame-outer"
+                                  x="33" y="63" width="50" height="74" rx="0.5"
+                                  fill="none"
+                                  stroke="#F5E2A8" stroke-width="1.2"
+                                  opacity="0"/>
+                            <rect class="stamp-frame-inner"
+                                  x="36" y="66" width="44" height="68" rx="0.5"
+                                  fill="none"
+                                  stroke="#F5E2A8" stroke-width="0.5"
+                                  opacity="0"/>
+                        </g>
+
+                        <!-- 顶部反光高光 -->
+                        <line class="stamp-highlight"
+                              x1="32" y1="62" x2="80" y2="62"
+                              stroke="rgba(255,220,170,0.0)" stroke-width="0.8" opacity="0"/>
+
+                        <!-- ========== 白文篆刻"皖美信用"（2x2 · 白字于朱底） ========== -->
+                        <g class="stamp-text">
+                            <text class="stamp-char" x="48" y="90"  font-family="STSong,SimSun,serif" font-size="16" font-weight="900" fill="#F5EDD8" text-anchor="middle" opacity="0" letter-spacing="0">皖</text>
+                            <text class="stamp-char" x="68" y="90"  font-family="STSong,SimSun,serif" font-size="16" font-weight="900" fill="#F5EDD8" text-anchor="middle" opacity="0">美</text>
+                            <text class="stamp-char" x="48" y="116" font-family="STSong,SimSun,serif" font-size="16" font-weight="900" fill="#F5EDD8" text-anchor="middle" opacity="0">信</text>
+                            <text class="stamp-char" x="68" y="116" font-family="STSong,SimSun,serif" font-size="16" font-weight="900" fill="#F5EDD8" text-anchor="middle">用</text>
+                        </g>
+                        <!-- 中央竖分隔线（印鉴风格） -->
+                        <line class="stamp-divider-v" x1="58" y1="68" x2="58" y2="132"
+                              stroke="rgba(245,237,216,0.15)" stroke-width="0.4" opacity="0"/>
+                        <line class="stamp-divider-h" x1="38" y1="100" x2="78" y2="100"
+                              stroke="rgba(245,237,216,0.15)" stroke-width="0.4" opacity="0"/>
+
+                        <!-- ========== 黄铜套环（印身与手柄之间） ========== -->
+                        <g class="stamp-collar">
+                            <rect x="30" y="48" width="56" height="10" fill="url(#stampBrass)" rx="1"/>
+                            <line x1="30" y1="50.5" x2="86" y2="50.5" stroke="#F5D68E" stroke-width="0.6" opacity="0.85"/>
+                            <line x1="30" y1="55.5" x2="86" y2="55.5" stroke="rgba(0,0,0,0.35)" stroke-width="0.5"/>
+                        </g>
+
+                        <!-- ========== 木质印柄（圆柱 · 带握纹 · 带顶盖） ========== -->
+                        <g class="stamp-handle">
+                            <!-- 柄顶盖（黄铜） -->
+                            <rect x="44" y="8" width="28" height="4" fill="url(#stampBrass)" rx="1.2"/>
+                            <!-- 木柄主体 -->
+                            <rect x="42" y="12" width="32" height="36" rx="2.5" fill="url(#stampWood)"/>
+                            <!-- 木柄顶面（透视） -->
+                            <ellipse cx="58" cy="13" rx="15" ry="2.5" fill="url(#stampWoodTop)"/>
+                            <!-- 握纹（三道横线） -->
+                            <line x1="42" y1="22" x2="74" y2="22" stroke="rgba(0,0,0,0.55)" stroke-width="0.8"/>
+                            <line x1="42" y1="30" x2="74" y2="30" stroke="rgba(0,0,0,0.55)" stroke-width="0.8"/>
+                            <line x1="42" y1="38" x2="74" y2="38" stroke="rgba(0,0,0,0.55)" stroke-width="0.8"/>
+                            <!-- 握纹高光 -->
+                            <line x1="42" y1="23" x2="74" y2="23" stroke="rgba(255,220,170,0.12)" stroke-width="0.4"/>
+                            <line x1="42" y1="31" x2="74" y2="31" stroke="rgba(255,220,170,0.12)" stroke-width="0.4"/>
+                            <line x1="42" y1="39" x2="74" y2="39" stroke="rgba(255,220,170,0.12)" stroke-width="0.4"/>
+                            <!-- 左侧高光 -->
+                            <rect x="44" y="13" width="3" height="34" fill="rgba(255,220,170,0.14)" rx="1"/>
+                            <!-- 右侧暗面 -->
+                            <rect x="69" y="13" width="5" height="34" fill="rgba(0,0,0,0.4)" rx="1"/>
+                        </g>
+
+                        <!-- 印面金边（底沿） -->
+                        <line class="stamp-edge" x1="29" y1="141.5" x2="87" y2="141.5" stroke="#E8C07A" stroke-width="0.6" opacity="0.4"/>
+                    </svg>
+                </div>
+
+                <!-- 邀约文字（段1） -->
+                <div class="wm-seal-invite">拉 · 动 · 垂 · 链 · 灯 · 照 · 印 · 显</div>
+                <!-- 中心落印印鉴（段4 浮现） -->
+                <div id="wm-stamped-mark" class="wm-stamped-mark" aria-hidden="true"></div>
+            </div>
+        </section>
+
+        <!-- 右侧 · 表单舞台 -->
+        <section class="wm-form-stage" aria-label="登录表单区">
+
+            <!-- 待启长明占位（SEALED 状态 · V6 灯下验印 · 四步叙事） -->
+            <div class="wm-form-placeholder" aria-hidden="true">
+                <div class="wm-autostart-ring" id="wm-autostart-ring">
+                    <svg viewBox="0 0 36 36"><circle class="ring-bg" cx="18" cy="18" r="15"/><circle class="ring-fill" cx="18" cy="18" r="15"/></svg>
+                </div>
+
+                <div class="ph-title">灯 · 下 · 验 · 印</div>
+                <div class="ph-subtitle">Credential Authentication Under The Lamp</div>
+
+                <div class="ph-steps">
+                    <div class="ph-step">
+                        <span class="ph-step-no">壹</span>
+                        <span class="ph-step-text">掌 灯 · 启 幕</span>
+                    </div>
+                    <div class="ph-step-sep"></div>
+                    <div class="ph-step">
+                        <span class="ph-step-no">贰</span>
+                        <span class="ph-step-text">光 落 印 显</span>
+                    </div>
+                    <div class="ph-step-sep"></div>
+                    <div class="ph-step">
+                        <span class="ph-step-no">叁</span>
+                        <span class="ph-step-text">核 验 身 份</span>
+                    </div>
+                    <div class="ph-step-sep"></div>
+                    <div class="ph-step">
+                        <span class="ph-step-no">肆</span>
+                        <span class="ph-step-text">授 信 入 场</span>
+                    </div>
+                </div>
+
+                <div class="wm-autostart-hint" id="wm-autostart-hint">3 秒后自动掌灯 · 或点击此处立即进入</div>
+            </div>
+
+            <!-- 卷轴表单（UNSEALED 展开） -->
+            <div class="wm-scroll" role="form" aria-labelledby="wm-form-title">
+                <div class="wm-scroll-inner">
+                    <!-- 归印按钮 -->
+                    <button type="button" class="wm-reseal-btn" data-action="reseal" aria-label="归印 · 收回信印" title="归印">↺</button>
+
+                    <!-- 标题 -->
+                    <div class="wm-field">
+                        <div class="wm-form-subtitle">
+                            <span class="wm-verify-badge" aria-label="验印徽标">
+                                <svg viewBox="0 0 24 24" width="18" height="18">
+                                    <circle cx="12" cy="12" r="10.5" fill="#B8141A" stroke="#C9A063" stroke-width="1"/>
+                                    <circle cx="12" cy="12" r="8.5" fill="none" stroke="#F5D68E" stroke-width="0.6" opacity="0.5"/>
+                                    <text x="12" y="16" font-family="SimSun,STSong,serif" font-size="11" font-weight="900" fill="#F5D68E" text-anchor="middle">验</text>
+                                </svg>
+                            </span>
+                            <span>CREDIT · 核 验 登 录</span>
+                        </div>
+                        <h2 id="wm-form-title" class="wm-form-title">皖 美 信 用</h2>
+                        <span class="wm-form-accent"></span>
+                    </div>
+
+                    <!-- 账号 -->
+                    <div class="wm-field">
+                        <div class="wm-input-group">
+                            <label for="wm-acct" class="wm-label">账号 / Account</label>
+                            <svg class="wm-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                            </svg>
+                            <input id="wm-acct" type="text" class="wm-input" placeholder="请输入账号 / 手机号 / 工号" autocomplete="username" data-required="true">
+                            <div class="wm-field-err" role="alert"></div>
+                        </div>
+                    </div>
+
+                    <!-- 密码 -->
+                    <div class="wm-field">
+                        <div class="wm-input-group">
+                            <label for="wm-pwd" class="wm-label">密码 / Password</label>
+                            <svg class="wm-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                            </svg>
+                            <input id="wm-pwd" type="password" class="wm-input" placeholder="请输入密码" autocomplete="current-password" data-required="true">
+                            <span id="wm-caps-tip" class="wm-capslock-tip" aria-live="polite">CAPS ON</span>
+                            <button id="wm-pwd-toggle" type="button" class="wm-input-toggle" aria-label="显示密码">
+                                <span class="wm-pwd-icon" style="font-family:'SimSun',serif;font-size:14px;font-weight:700;">封</span>
+                            </button>
+                            <div class="wm-field-err" role="alert"></div>
+                        </div>
+                    </div>
+
+                    <!-- V5 · 测试凭证便签 -->
+                    <div class="wm-field">
+                        <div class="wm-cred-hint" role="note" aria-label="演示账号提示">
+                            <span class="wm-cred-hint-badge">演 示</span>
+                            <span class="wm-cred-hint-text">
+                                测试账号已预填 · 账号 <code>admin</code> · 密码 <code>admin123</code> · 点击下方登录即可
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- 记住账号 + 忘密 -->
+                    <div class="wm-field">
+                        <div class="wm-options-row">
+                            <label class="wm-check">
+                                <input id="wm-remember" type="checkbox">
+                                <span class="wm-check-box" aria-hidden="true"></span>
+                                <span>灯 下 留 名（仅本机 · 不记录密码）</span>
+                            </label>
+                            <a href="#" class="wm-forgot" data-action="open-forgot">忘记密码？</a>
+                        </div>
+                    </div>
+
+                    <!-- 登录按钮 -->
+                    <div class="wm-field">
+                        <button id="wm-cta" class="wm-cta" type="button" aria-label="核验并登录">
+                            <span class="wm-cta-text">核 验 并 登 录</span>
+                        </button>
+                    </div>
+
+                    <!-- 官方认证通道 -->
+                    <div class="wm-field">
+                        <div class="wm-divider">官 方 认 证 通 道</div>
+                        <div class="wm-official-channels">
+                            <button type="button" class="wm-channel-btn" data-action="auth-sso" aria-label="政务网 SSO 登录">
+                                <svg class="wm-channel-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 12h6M9 16h6"/></svg>
+                                政务 SSO
+                            </button>
+                            <button type="button" class="wm-channel-btn" data-action="auth-ca" aria-label="CA 证书登录">
+                                <svg class="wm-channel-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 12l3 3 5-6"/></svg>
+                                CA 证书
+                            </button>
+                            <button type="button" class="wm-channel-btn" data-action="auth-ukey" aria-label="国密 U-Key 登录">
+                                <svg class="wm-channel-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="9" width="14" height="6" rx="1"/><path d="M16 10h4v4h-4z"/><path d="M6 12h3"/></svg>
+                                国密 U-Key
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- MVP 角色快速登录 -->
+                    <div class="wm-field">
+                        <button type="button" class="wm-toggle-role" data-action="toggle-role">
+                            或选择角色快速体验（MVP 演示）↓
+                        </button>
+                        <div id="wm-role-quick" class="wm-role-quick">
+                            <div class="wm-role-quick-title">— 角 色 快 速 登 录 —</div>
+                            <div id="wm-role-grid" class="wm-role-grid" role="listbox" aria-label="角色列表"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ========== 3. 底部锚定（合规+版权） ========== -->
+    <footer class="wm-login-footer" role="contentinfo">
+        <div class="wm-compliance">
+            本系统受《数据安全法》《网络安全法》《个人信息保护法》及《国有企业数据资产监督管理办法》保护 · 所有访问将被审计留痕 · 严禁非法访问
+            <span style="margin:0 8px;color:var(--wm-accent);">|</span>
+            已通过 等保三级认证 · ISO 27001 · 密码应用安全性评估
+        </div>
+        <div class="wm-copyright">
+            <strong>主管单位：</strong>安徽省人民政府国有资产监督管理委员会
+            <span style="margin:0 8px;">·</span>
+            <strong>承建单位：</strong>远景赋能产业集团 · 中国科学技术大学
+            <span style="margin:0 8px;">·</span>
+            <strong>运维单位：</strong>安徽国资数字科技有限公司
+            <br/>
+            © 2026 皖美信用 · 皖 ICP 备 XXXXXXXX 号 · 皖公网安备 XXXXXXXX 号 · WMCD-LOGIN v1.0
+        </div>
+    </footer>
+</div>
+
+<!-- ========== 忘密合规浮层 ========== -->
+<div id="wm-forgot-modal" class="wm-modal-mask" role="dialog" aria-modal="true" aria-labelledby="wm-modal-title">
+    <div class="wm-modal">
+        <h3 id="wm-modal-title">忘 记 密 码 · 合 规 重 置 流 程</h3>
+        <p>依据《国有企业数据资产监督管理办法》与等保三级合规要求，<strong style="color:var(--wm-accent);">皖美信用平台不支持自助邮箱/短信重置密码</strong>。请按以下合规路径处理：</p>
+        <ol class="wm-modal-steps">
+            <li>① 联系本单位<strong>系统管理员</strong>提交《账号密码重置申请表》</li>
+            <li>② 由管理员在<strong>组织架构管理后台</strong>发起重置审批</li>
+            <li>③ 审批通过后，您将在企业内部邮箱/短信收到<strong>一次性临时密码</strong></li>
+            <li>④ 使用临时密码登录后系统将<strong>强制要求修改</strong>为复杂度达标的新密码</li>
+        </ol>
+        <p style="font-size:11px;color:var(--wm-ink-dim);">如本单位尚未指派系统管理员，请联系 省国资委信息化处（0551-XXXXXXXX）·&nbsp;support@anhui-sasac.gov.cn</p>
+        <div class="wm-modal-actions">
+            <button type="button" class="wm-btn-ghost" data-action="close-modal">我 已 了 解</button>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

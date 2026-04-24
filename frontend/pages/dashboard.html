@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>智慧监管驾驶舱 - 皖美信用</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<link rel="stylesheet" href="../assets/css/shared.css?v=p3.1">
+<script src="../assets/js/shared.js?v=p3.1"></script>
+<script src="../assets/js/interactions.js?v=p3.1"></script>
+<link rel="stylesheet" href="../assets/css/mvp.css?v=p3.1">
+<link rel="stylesheet" href="../assets/css/ai.css?v=p3.1">
+<script src="../assets/js/mock-data.js?v=p3.1"></script>
+<script src="../assets/js/auth.js?v=p3.1"></script>
+<script src="../assets/js/tickets.js?v=p3.1"></script>
+<script src="../assets/js/phase2.js?v=p3.1"></script>
+<script src="../assets/js/components.js?v=p3.1"></script>
+<script src="../assets/js/ai-client.js?v=p3.1"></script>
+
+<style>
+    body {
+        background: #0A1F40;
+        color: #D8E1F0;
+    }
+    .dash-header {
+        background: linear-gradient(180deg, #0F2A56 0%, #0A1F40 100%);
+        border-bottom: 2px solid var(--color-accent);
+        padding: 16px 32px;
+        position: relative;
+    }
+    .dash-header::after {
+        content: "";
+        position: absolute;
+        left: 0; right: 0; bottom: -1px;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(201, 160, 99, 0.6), transparent);
+    }
+    .dash-title {
+        font-family: SimSun, serif;
+        font-size: 28px;
+        font-weight: 700;
+        letter-spacing: 8px;
+        background: linear-gradient(180deg, #FFFFFF, #C9A063);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+    .dash-panel {
+        background: linear-gradient(180deg, rgba(30, 60, 110, 0.6) 0%, rgba(15, 35, 70, 0.8) 100%);
+        border: 1px solid rgba(201, 160, 99, 0.2);
+        border-radius: 6px;
+        backdrop-filter: blur(10px);
+        position: relative;
+    }
+    .dash-panel::before {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(201, 160, 99, 0.5), transparent);
+    }
+    .panel-header {
+        padding: 10px 16px;
+        border-bottom: 1px solid rgba(201, 160, 99, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .panel-title {
+        font-size: 14px;
+        font-weight: 700;
+        color: #C9A063;
+        letter-spacing: 1.5px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .panel-title::before {
+        content: "◆";
+        color: var(--color-accent);
+        font-size: 10px;
+    }
+    .panel-body { padding: 14px; }
+    .big-num {
+        font-family: 'Inter', monospace;
+        font-weight: 800;
+        background: linear-gradient(180deg, #FFD77A, #C9A063);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+    .kpi-dash {
+        background: linear-gradient(180deg, rgba(201,160,99,0.1), rgba(201,160,99,0.03));
+        border: 1px solid rgba(201, 160, 99, 0.3);
+        border-radius: 6px;
+        padding: 14px 16px;
+        position: relative;
+        overflow: hidden;
+    }
+    .kpi-dash::before {
+        content: "";
+        position: absolute;
+        top: 0; right: 0;
+        width: 80px;
+        height: 80px;
+        background: radial-gradient(circle, rgba(201,160,99,0.15), transparent 70%);
+    }
+    .alert-dash-row {
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(201,160,99,0.15);
+        font-size: 12px;
+    }
+    .alert-dash-row:last-child { border: none; }
+    .corner-decor {
+        position: absolute;
+        width: 14px;
+        height: 14px;
+        border: 2px solid var(--color-accent);
+    }
+    .corner-decor.tl { top: 0; left: 0; border-right: none; border-bottom: none; }
+    .corner-decor.tr { top: 0; right: 0; border-left: none; border-bottom: none; }
+    .corner-decor.bl { bottom: 0; left: 0; border-right: none; border-top: none; }
+    .corner-decor.br { bottom: 0; right: 0; border-left: none; border-top: none; }
+
+    /* 覆盖全局样式 */
+    .wm-topbar { display: none; }
+    .wm-navbar { display: none; }
+    .wm-footer { background: transparent; border: none; }
+</style>
+</head>
+<body>
+<script>if (!window.WM_AUTH || !window.WM_AUTH.guard()) throw new Error("not logged in");</script>
+
+<!-- 驾驶舱专属顶部 -->
+<div class="dash-header">
+    <div class="flex items-center justify-between">
+        <div class="flex items-center gap-4">
+            <a href="index.html" class="flex items-center gap-3">
+                <div style="width:44px;height:44px;background:linear-gradient(135deg, #C9A063 0%, #E8C87A 100%);color:#8A0F14;font-weight:900;font-family:SimSun,serif;border-radius:4px;font-size:22px;display:flex;align-items:center;justify-content:center;">皖</div>
+            </a>
+            <div>
+                <div class="dash-title">智慧监管驾驶舱</div>
+                <div class="text-xs" style="color:#C9A063;letter-spacing:3px;opacity:0.85;">ANHUI SASAC · INTELLIGENT SUPERVISION CENTER</div>
+            </div>
+        </div>
+        <div class="flex items-center gap-6">
+            <div class="flex items-center gap-2">
+                <span class="wm-light green wm-pulse"></span>
+                <span style="color:#C9A063;font-size:12px;">全系统运行中</span>
+            </div>
+            <div id="wm-clock" style="color:#FFD77A;font-family:monospace;font-size:14px;letter-spacing:1px;"></div>
+            <a href="index.html" class="wm-btn wm-btn-ghost wm-btn-sm" style="background:transparent;color:#C9A063;border-color:rgba(201,160,99,0.4);">← 返回首页</a>
+        </div>
+    </div>
+</div>
+
+<!-- 顶部6大KPI -->
+<div class="px-6 py-4 grid grid-cols-6 gap-4">
+    <div class="kpi-dash">
+        <div style="color:rgba(216,225,240,0.7);font-size:11px;letter-spacing:1.5px;">覆盖国资国企</div>
+        <div class="flex items-baseline gap-2 mt-1">
+            <span class="big-num" style="font-size:32px;">1,248</span>
+            <span style="color:rgba(216,225,240,0.6);font-size:12px;">家</span>
+        </div>
+        <div style="color:#4ADE80;font-size:11px;margin-top:2px;">↑ 23 家 · 本月</div>
+    </div>
+    <div class="kpi-dash">
+        <div style="color:rgba(216,225,240,0.7);font-size:11px;letter-spacing:1.5px;">AAA级企业</div>
+        <div class="flex items-baseline gap-2 mt-1">
+            <span class="big-num" style="font-size:32px;">186</span>
+            <span style="color:rgba(216,225,240,0.6);font-size:12px;">家 · 14.9%</span>
+        </div>
+        <div style="color:#4ADE80;font-size:11px;margin-top:2px;">↑ 5 家 · 质量跃升</div>
+    </div>
+    <div class="kpi-dash">
+        <div style="color:rgba(216,225,240,0.7);font-size:11px;letter-spacing:1.5px;">综合健康指数</div>
+        <div class="flex items-baseline gap-2 mt-1">
+            <span class="big-num" style="font-size:32px;">87.6</span>
+            <span style="color:rgba(216,225,240,0.6);font-size:12px;">分</span>
+        </div>
+        <div style="color:#4ADE80;font-size:11px;margin-top:2px;">↑ 3.2 · 同比</div>
+    </div>
+    <div class="kpi-dash" style="background:linear-gradient(180deg, rgba(214,64,69,0.15), rgba(214,64,69,0.03));border-color:rgba(214,64,69,0.4);">
+        <div style="color:rgba(216,225,240,0.7);font-size:11px;letter-spacing:1.5px;">红色预警</div>
+        <div class="flex items-baseline gap-2 mt-1">
+            <span style="color:#FCA5A5;font-size:32px;font-weight:800;font-family:monospace;">3</span>
+            <span style="color:rgba(216,225,240,0.6);font-size:12px;">条待处置</span>
+        </div>
+        <div style="color:#FCA5A5;font-size:11px;margin-top:2px;">🔴 需立即处置</div>
+    </div>
+    <div class="kpi-dash">
+        <div style="color:rgba(216,225,240,0.7);font-size:11px;letter-spacing:1.5px;">融资撮合规模</div>
+        <div class="flex items-baseline gap-2 mt-1">
+            <span class="big-num" style="font-size:32px;">1,862</span>
+            <span style="color:rgba(216,225,240,0.6);font-size:12px;">亿</span>
+        </div>
+        <div style="color:#4ADE80;font-size:11px;margin-top:2px;">↑ 31.5% · YoY</div>
+    </div>
+    <div class="kpi-dash">
+        <div style="color:rgba(216,225,240,0.7);font-size:11px;letter-spacing:1.5px;">穿透覆盖率</div>
+        <div class="flex items-baseline gap-2 mt-1">
+            <span class="big-num" style="font-size:32px;">100</span>
+            <span style="color:rgba(216,225,240,0.6);font-size:12px;">%</span>
+        </div>
+        <div style="color:#4ADE80;font-size:11px;margin-top:2px;">全级次 · 三穿透</div>
+    </div>
+</div>
+
+<!-- 主内容 -->
+<div class="px-6 pb-6 grid grid-cols-12 gap-4">
+
+    <!-- 左列：地域分布 + 行业健康度 -->
+    <div class="col-span-3 space-y-4">
+        <div class="dash-panel">
+            <div class="corner-decor tl"></div><div class="corner-decor tr"></div>
+            <div class="corner-decor bl"></div><div class="corner-decor br"></div>
+            <div class="panel-header">
+                <span class="panel-title">地域风险热力 · 16地市</span>
+            </div>
+            <div class="panel-body">
+                <div id="chart-region" style="height:260px;"></div>
+            </div>
+        </div>
+
+        <div class="dash-panel">
+            <div class="corner-decor tl"></div><div class="corner-decor tr"></div>
+            <div class="corner-decor bl"></div><div class="corner-decor br"></div>
+            <div class="panel-header">
+                <span class="panel-title">十一大产业 · 健康度</span>
+            </div>
+            <div class="panel-body">
+                <div id="chart-industry-dash" style="height:240px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 中列：全景地图 + 融资趋势 -->
+    <div class="col-span-6 space-y-4">
+        <div class="dash-panel">
+            <div class="corner-decor tl"></div><div class="corner-decor tr"></div>
+            <div class="corner-decor bl"></div><div class="corner-decor br"></div>
+            <div class="panel-header">
+                <span class="panel-title">全省国资国企信用健康度全景图</span>
+                <span style="color:rgba(216,225,240,0.6);font-size:11px;">点击地区可下钻</span>
+            </div>
+            <div class="panel-body">
+                <div id="chart-map" style="height:360px;"></div>
+            </div>
+        </div>
+
+        <div class="dash-panel">
+            <div class="corner-decor tl"></div><div class="corner-decor tr"></div>
+            <div class="corner-decor bl"></div><div class="corner-decor br"></div>
+            <div class="panel-header">
+                <span class="panel-title">核心业务趋势 · 近12月</span>
+            </div>
+            <div class="panel-body">
+                <div id="chart-trend" style="height:180px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 右列：实时预警流 + TOP -->
+    <div class="col-span-3 space-y-4">
+        <div class="dash-panel">
+            <div class="corner-decor tl"></div><div class="corner-decor tr"></div>
+            <div class="corner-decor bl"></div><div class="corner-decor br"></div>
+            <div class="panel-header">
+                <span class="panel-title">实时预警流</span>
+                <span class="wm-light red wm-pulse"></span>
+            </div>
+            <div class="panel-body" style="max-height:260px;overflow-y:auto;" id="dash-alerts"></div>
+        </div>
+
+        <div class="dash-panel">
+            <div class="corner-decor tl"></div><div class="corner-decor tr"></div>
+            <div class="corner-decor bl"></div><div class="corner-decor br"></div>
+            <div class="panel-header">
+                <span class="panel-title">省属国企 · TOP 10</span>
+            </div>
+            <div class="panel-body" id="dash-tops"></div>
+        </div>
+    </div>
+
+    <!-- 底部：七智能体运行 + 监管操作 -->
+    <div class="col-span-12">
+        <div class="dash-panel">
+            <div class="corner-decor tl"></div><div class="corner-decor tr"></div>
+            <div class="corner-decor bl"></div><div class="corner-decor br"></div>
+            <div class="panel-header">
+                <span class="panel-title">七大智能体实时运行 · 本月量化价值</span>
+                <div class="flex gap-2">
+                    <button class="wm-btn wm-btn-gold wm-btn-sm">📄 生成月度监管报告</button>
+                    <button class="wm-btn wm-btn-sm" style="background:rgba(201,160,99,0.15);color:#C9A063;border:1px solid #C9A06355;">🚨 一键下发督办</button>
+                </div>
+            </div>
+            <div class="panel-body grid grid-cols-7 gap-3" id="dash-agents"></div>
+        </div>
+    </div>
+</div>
+
+<div style="text-align:center;padding:18px;color:rgba(201,160,99,0.6);font-size:11px;letter-spacing:1px;border-top:1px solid rgba(201,160,99,0.15);">
+    信用筑基 · 数字赋能 · 全面助力安徽省国资国企高质量发展 ｜ © 2026 安徽省国有资产监督管理委员会
+</div>
+
+<script>
+// 通用暗色图表色板
+const DARK_AXIS = {
+    axisLine: { lineStyle: { color: 'rgba(201,160,99,0.4)' } },
+    axisLabel: { color: 'rgba(216,225,240,0.8)', fontSize: 10 },
+    splitLine: { lineStyle: { color: 'rgba(201,160,99,0.12)', type: 'dashed' } }
+};
+
+// ========== 地域分布（柱状条） ==========
+(function(){
+    const chart = echarts.init(document.getElementById('chart-region'));
+    const cities = ['合肥','芜湖','蚌埠','马鞍山','安庆','阜阳','宿州','六安','淮南','黄山','滁州','铜陵','池州','宣城','亳州','淮北'];
+    const data = [186, 138, 96, 88, 82, 75, 68, 62, 58, 52, 48, 42, 38, 35, 32, 28];
+    const health = [92, 88, 85, 86, 82, 76, 74, 78, 80, 84, 82, 86, 81, 83, 75, 72];
+    chart.setOption({
+        tooltip: { trigger: 'axis' },
+        grid: { top: 10, right: 20, bottom: 15, left: 65 },
+        xAxis: { type:'value', ...DARK_AXIS },
+        yAxis: { type:'category', data: cities, inverse: true, ...DARK_AXIS, axisLabel: {...DARK_AXIS.axisLabel, fontSize: 10 } },
+        series: [{
+            type: 'bar', data: data.map((v, i) => ({ value: v, itemStyle: { color: health[i]>=85?'#4ADE80':health[i]>=75?'#C9A063':'#FCA5A5', borderRadius:[0,3,3,0] }})),
+            barWidth: 10,
+            label: { show: true, position: 'right', color: '#C9A063', fontSize: 10 }
+        }]
+    });
+    window.addEventListener('resize', () => chart.resize());
+})();
+
+// ========== 行业健康度 ==========
+(function(){
+    const chart = echarts.init(document.getElementById('chart-industry-dash'));
+    chart.setOption({
+        tooltip: { trigger: 'axis' },
+        radar: {
+            indicator: [
+                { name:'新能源车', max:100 },
+                { name:'IT', max:100 },
+                { name:'高端装备', max:100 },
+                { name:'智能家电', max:100 },
+                { name:'新材料', max:100 },
+                { name:'绿色食品', max:100 },
+                { name:'生命健康', max:100 },
+                { name:'文旅', max:100 }
+            ],
+            radius: '68%',
+            axisName: { color: '#C9A063', fontSize: 10, fontWeight: 600 },
+            splitLine: { lineStyle: { color: 'rgba(201,160,99,0.2)' } },
+            splitArea: { areaStyle: { color: ['rgba(201,160,99,0.05)', 'rgba(184,20,26,0.03)'] } }
+        },
+        series: [{
+            type: 'radar',
+            data: [{
+                value: [94, 91, 88, 85, 82, 79, 76, 74], name: '健康度',
+                areaStyle: { color: 'rgba(201,160,99,0.25)' },
+                lineStyle: { color: '#FFD77A', width: 2 },
+                itemStyle: { color: '#FFD77A' }
+            }]
+        }]
+    });
+    window.addEventListener('resize', () => chart.resize());
+})();
+
+// ========== 全景地图（散点图代替） ==========
+(function(){
+    const chart = echarts.init(document.getElementById('chart-map'));
+    // 模拟 - 散点代替地图
+    const companies = [];
+    const cityPos = {
+        '合肥':[50,40],'芜湖':[58,60],'蚌埠':[45,20],'马鞍山':[62,55],'安庆':[40,65],
+        '阜阳':[28,25],'宿州':[38,15],'六安':[38,42],'淮南':[42,28],'黄山':[55,80],
+        '滁州':[52,32],'铜陵':[54,58],'池州':[48,68],'宣城':[62,68],'亳州':[25,18],'淮北':[35,12]
+    };
+    Object.keys(cityPos).forEach(city => {
+        const [x, y] = cityPos[city];
+        const count = Math.round(28 + Math.random() * 160);
+        companies.push({ name: city, value: [x, y, count], itemStyle: { color: count>=100?'#FCA5A5':count>=60?'#FFD77A':'#4ADE80' } });
+    });
+
+    chart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: { formatter: (p) => `${p.name}<br/>国企数量: ${p.value[2]} 家` },
+        title: {
+            text: '安徽省 · 16地市',
+            left: 'center', top: 5,
+            textStyle: { color: 'rgba(201,160,99,0.85)', fontSize: 13, fontWeight: 700 }
+        },
+        grid: { top: 35, right: 40, bottom: 30, left: 40 },
+        xAxis: { type:'value', min:10, max:80, show: false },
+        yAxis: { type:'value', min: 0, max: 100, show: false, inverse: true },
+        series: [
+            {
+                type: 'scatter',
+                symbolSize: (v) => Math.max(15, Math.sqrt(v[2]) * 3),
+                data: companies,
+                label: { show: true, formatter: (p) => p.name, position: 'bottom', color: '#C9A063', fontSize: 10, fontWeight: 600 },
+                emphasis: { label: { show: true, color: '#FFD77A' } }
+            }
+        ]
+    });
+    window.addEventListener('resize', () => chart.resize());
+})();
+
+// ========== 核心业务趋势 ==========
+(function(){
+    const chart = echarts.init(document.getElementById('chart-trend'));
+    const months = ['5月','6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月'];
+    chart.setOption({
+        tooltip: { trigger: 'axis' },
+        legend: { data: ['融资撮合','盘活规模','投资落地','风险处置'], top: 0, textStyle: { color: 'rgba(216,225,240,0.85)', fontSize: 10 } },
+        grid: { top: 28, right: 20, bottom: 20, left: 45 },
+        xAxis: { type:'category', data: months, ...DARK_AXIS },
+        yAxis: { type:'value', name: '亿', nameTextStyle: { color: 'rgba(216,225,240,0.6)' }, ...DARK_AXIS },
+        series: [
+            { name:'融资撮合', type:'line', smooth: true, data: [110,132,145,138,156,172,188,210,195,225,245,260], itemStyle: { color: '#B8141A' }, lineStyle: { width: 2 } },
+            { name:'盘活规模', type:'line', smooth: true, data: [38,45,52,58,65,72,80,88,95,102,112,125], itemStyle: { color: '#C9A063' }, lineStyle: { width: 2 } },
+            { name:'投资落地', type:'line', smooth: true, data: [28,32,38,42,46,52,58,62,68,72,78,85], itemStyle: { color: '#4ADE80' }, lineStyle: { width: 2 } },
+            { name:'风险处置', type:'bar', data: [48,52,56,62,58,65,72,68,82,76,82,95], itemStyle: { color: 'rgba(214,64,69,0.55)' }, barWidth: 14 }
+        ]
+    });
+    window.addEventListener('resize', () => chart.resize());
+})();
+
+// ========== 实时预警流 ==========
+(function(){
+    const alerts = [
+        { t:'09:42', lv:'red', e:'XX建工集团', msg:'到期债务5.2亿预警' },
+        { t:'09:18', lv:'red', e:'XX城投', msg:'信用评分下滑56分' },
+        { t:'08:56', lv:'red', e:'XX建工', msg:'担保圈节点+2' },
+        { t:'08:30', lv:'orange', e:'XX能源', msg:'跨集团担保新增' },
+        { t:'08:05', lv:'orange', e:'XX商贸', msg:'负面舆情3σ突破' },
+        { t:'07:40', lv:'green', e:'XX集团', msg:'流动性预警解除' },
+        { t:'07:12', lv:'orange', e:'XX文旅', msg:'行政处罚新增' },
+        { t:'06:48', lv:'yellow', e:'XX科技', msg:'评分下滑20分' }
+    ];
+    const lvDot = { red:'#FCA5A5', orange:'#FB923C', yellow:'#FBBF24', green:'#4ADE80' };
+    document.getElementById('dash-alerts').innerHTML = alerts.map(a => `
+        <div class="alert-dash-row">
+            <div class="flex items-center gap-2 mb-1">
+                <span style="color:${lvDot[a.lv]};font-size:14px;">●</span>
+                <span style="color:#C9A063;font-family:monospace;font-size:11px;">${a.t}</span>
+                <span style="color:#FFF;font-weight:600;">${a.e}</span>
+            </div>
+            <div style="color:rgba(216,225,240,0.7);font-size:11px;padding-left:18px;">${a.msg}</div>
+        </div>
+    `).join('');
+})();
+
+// ========== TOP10 ==========
+(function(){
+    const data = [
+        { n:'皖能集团', s:968 }, { n:'海螺集团', s:962 }, { n:'建工集团', s:954 },
+        { n:'皖企投集团', s:948 }, { n:'江汽集团', s:942 }, { n:'古井贡', s:935 },
+        { n:'交控集团', s:928 }, { n:'港航集团', s:921 }, { n:'国元金控', s:915 }, { n:'合肥兴泰', s:908 }
+    ];
+    document.getElementById('dash-tops').innerHTML = data.map((d, i) => `
+        <div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid rgba(201,160,99,0.1);">
+            <span style="width:22px;height:22px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;color:white;background:${i<3?'linear-gradient(135deg,#C9A063,#A8823E)':'rgba(201,160,99,0.15)'};">${i+1}</span>
+            <span style="flex:1;color:#FFF;font-size:12px;font-weight:600;">${d.n}</span>
+            <span class="big-num" style="font-size:14px;">${d.s}</span>
+        </div>
+    `).join('');
+})();
+
+// ========== 七智能体实时运行 ==========
+(function(){
+    const data = [
+        { name:'信用优化', icon:'🏛', val:'1,248', unit:'家覆盖', chg:'↑ 23 家', color:'#B8141A' },
+        { name:'融资支持', icon:'💰', val:'245', unit:'亿/月', chg:'↑ 31.5%', color:'#0F2A56' },
+        { name:'投资决策', icon:'📈', val:'58', unit:'尽调/月', chg:'↑ 12', color:'#1F4A8A' },
+        { name:'三资盘活', icon:'🏗', val:'125', unit:'亿/月', chg:'↑ 28 亿', color:'#C9A063' },
+        { name:'并购工具', icon:'🔗', val:'44', unit:'项目', chg:'↑ 6', color:'#8A0F14' },
+        { name:'供应链', icon:'🔄', val:'8,642', unit:'家供应商', chg:'↑ 186', color:'#A8823E' },
+        { name:'风险防控', icon:'🛡', val:'27', unit:'预警处置', chg:'↑ 8', color:'#D64045' }
+    ];
+    document.getElementById('dash-agents').innerHTML = data.map(d => `
+        <div style="padding:14px;background:linear-gradient(180deg, rgba(${parseInt(d.color.slice(1,3),16)},${parseInt(d.color.slice(3,5),16)},${parseInt(d.color.slice(5,7),16)},0.12), rgba(255,255,255,0.02));border:1px solid ${d.color}55;border-radius:6px;border-top:3px solid ${d.color};">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                <span style="font-size:22px;">${d.icon}</span>
+                <span style="font-size:10px;color:#4ADE80;">${d.chg}</span>
+            </div>
+            <div style="font-size:12px;color:rgba(216,225,240,0.75);margin-bottom:2px;">${d.name}智能体</div>
+            <div class="flex items-baseline gap-1">
+                <span class="big-num" style="font-size:22px;">${d.val}</span>
+                <span style="font-size:10px;color:rgba(216,225,240,0.55);">${d.unit}</span>
+            </div>
+        </div>
+    `).join('');
+})();
+</script>
+
+<script>if (window.WM_C && window.WM_C.bindRoleSwitcher) WM_C.bindRoleSwitcher();</script>
+</body>
+</html>

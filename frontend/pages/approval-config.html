@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>审批流配置 - 皖美信用</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="../assets/css/shared.css?v=p3.1">
+<link rel="stylesheet" href="../assets/css/mvp.css?v=p3.1">
+<link rel="stylesheet" href="../assets/css/ai.css?v=p3.1">
+<script src="../assets/js/shared.js?v=p3.1"></script>
+<script src="../assets/js/interactions.js?v=p3.1"></script>
+<script src="../assets/js/mock-data.js?v=p3.1"></script>
+<script src="../assets/js/auth.js?v=p3.1"></script>
+<script src="../assets/js/tickets.js?v=p3.1"></script>
+<script src="../assets/js/phase2.js?v=p3.1"></script>
+<script src="../assets/js/components.js?v=p3.1"></script>
+<script src="../assets/js/ai-client.js?v=p3.1"></script>
+</head>
+<body class="bg-wm-bg">
+
+<script>if (!window.WM_AUTH.guard()) throw new Error('not logged in');</script>
+
+<div id="topbar-root"></div>
+<script>document.getElementById('topbar-root').outerHTML = WM_C.renderAuthTopbar('approval-config');</script>
+
+<main class="px-8 py-6 max-w-[1400px] mx-auto">
+    <div class="flex items-center justify-between mb-5">
+        <div>
+            <h1 class="text-2xl font-bold text-wm-secondary">⚙ 审批流配置</h1>
+            <div class="text-xs text-wm-gray3 mt-1">按单据类型 + 金额区间 配置多级审批链</div>
+        </div>
+        <div class="flex items-center gap-2">
+            <button class="wm-btn wm-btn-ghost wm-btn-sm" id="btn-reset">恢复默认</button>
+            <button class="wm-btn wm-btn-primary wm-btn-sm" id="btn-save">保存配置</button>
+        </div>
+    </div>
+
+    <!-- 提示 -->
+    <div class="p-4 rounded mb-5" style="background:linear-gradient(135deg, rgba(201,160,99,0.06), rgba(15,42,86,0.02));border-left:3px solid var(--color-accent);">
+        <div class="text-sm font-semibold text-wm-secondary mb-1">💡 审批规则说明</div>
+        <div class="text-xs text-wm-gray leading-relaxed">
+            • 每种单据类型可配置多条规则，按金额区间自动匹配<br>
+            • 每条规则指定一个<strong>审批链</strong>（按顺序依次审批）<br>
+            • 审批链支持1-4级，每一级审批通过方可进入下一级<br>
+            • 任意一级驳回，单据状态变为"已驳回"<br>
+            • 本配置面向演示，生产环境将对接 OA/BPM 审批流引擎
+        </div>
+    </div>
+
+    <!-- Tab -->
+    <div class="mb-5">
+        <div class="wm-tabs" id="type-tabs">
+            <div class="wm-tab active" data-type="financing">💰 融资</div>
+            <div class="wm-tab" data-type="investment">📈 投资</div>
+            <div class="wm-tab" data-type="assets">🏗 盘活</div>
+            <div class="wm-tab" data-type="ma">🔗 并购</div>
+            <div class="wm-tab" data-type="supply">🔄 招投标</div>
+            <div class="wm-tab" data-type="credit">🏛 信用</div>
+            <div class="wm-tab" data-type="risk">🛡 风控</div>
+        </div>
+    </div>
+
+    <!-- 配置表格 -->
+    <div class="wm-card">
+        <div class="wm-card-header">
+            <h3 id="rules-title">融资类单据审批规则</h3>
+            <button class="wm-btn wm-btn-ghost wm-btn-sm" id="btn-add-rule">＋ 新增规则</button>
+        </div>
+        <div class="p-4" id="rules-container">
+            <div class="wm-empty"><div class="empty-icon">⏳</div><div class="empty-title">加载中…</div></div>
+        </div>
+    </div>
+</main>
+
+<div id="footer-root"></div>
+<script>document.getElementById('footer-root').outerHTML = renderFooter();</script>
+
+<script>
+const user = window.WM_AUTH.currentUser();
+WM_C.bindRoleSwitcher();
+
+let currentType = 'financing';
+let chains = JSON.parse(JSON.stringify(window.WM_P2.getChains()));
+
+const TYPE_LABELS = {
+    financing: '💰 融资', investment: '📈 投资', assets: '🏗 盘活',
+    ma: '🔗 并购', supply: '🔄 招投标', credit: '🏛 信用', risk: '🛡 风控',
+};
+
+function render() {
+    document.getElementById('rules-title').textContent = TYPE_LABELS[currentType] + ' 类单据审批规则';
+    const rules = chains[currentType] || [];
+    const container = document.getElementById('rules-container');
+
+    if (!rules.length) {
+        container.innerHTML = `<div class="wm-empty"><div class="empty-icon">⚙</div><div class="empty-title">暂无规则</div><div class="empty-desc">点击右上角"新增规则"</div></div>`;
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="space-y-4">
+            ${rules.map((rule, ri) => renderRule(rule, ri)).join('')}
+        </div>`;
+
+    // 绑定事件
+    container.querySelectorAll('[data-act]').forEach(btn => {
+        const act = btn.getAttribute('data-act');
+        const ri = parseInt(btn.getAttribute('data-rule-idx'));
+        const ai = btn.hasAttribute('data-app-idx') ? parseInt(btn.getAttribute('data-app-idx')) : null;
+        btn.addEventListener('click', () => handleAction(act, ri, ai));
+    });
+    container.querySelectorAll('input[data-field]').forEach(inp => {
+        inp.addEventListener('change', (e) => {
+            const ri = parseInt(inp.getAttribute('data-rule-idx'));
+            const field = inp.getAttribute('data-field');
+            chains[currentType][ri][field] = field === 'name' ? inp.value : parseFloat(inp.value) || 0;
+        });
+    });
+}
+
+function renderRule(rule, idx) {
+    const amtRange = (rule.maxAmount >= 9999999999) ? `≥ ${rule.minAmount / 10000} 亿` : `${rule.minAmount / 10000} 亿 - ${rule.maxAmount / 10000} 亿`;
+    return `
+    <div class="wm-card-flat p-4" style="background:white;">
+        <div class="flex items-center gap-3 mb-4">
+            <span class="wm-badge wm-badge-blue">规则 ${idx + 1}</span>
+            <input type="text" class="wm-input flex-1" data-field="name" data-rule-idx="${idx}" value="${WM_C.escapeHtml(rule.name)}" placeholder="规则名称">
+            <button class="wm-btn wm-btn-ghost wm-btn-sm" data-act="delete-rule" data-rule-idx="${idx}" style="color:#D64045;">删除规则</button>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3 mb-4">
+            <div>
+                <label class="wm-form-label">金额下限（万元）</label>
+                <input type="number" class="wm-input" data-field="minAmount" data-rule-idx="${idx}" value="${rule.minAmount}">
+            </div>
+            <div>
+                <label class="wm-form-label">金额上限（万元）</label>
+                <input type="number" class="wm-input" data-field="maxAmount" data-rule-idx="${idx}" value="${rule.maxAmount}">
+                <div class="wm-form-help">9999999999 表示无上限</div>
+            </div>
+            <div>
+                <label class="wm-form-label">金额区间</label>
+                <div class="wm-input" style="background:#FAFAF7;cursor:default;">${amtRange}</div>
+            </div>
+        </div>
+
+        <div>
+            <label class="wm-form-label">审批链（按顺序）</label>
+            <div class="wm-approval-chain" style="padding:10px 0;">
+                ${rule.chain.map((uid, ai) => {
+                    const u = window.WM_STORE.getUser(uid);
+                    return `
+                    <div class="wm-chain-node" style="min-width:150px;flex:0 1 150px;">
+                        <div class="cn-step">第 ${ai + 1} 级</div>
+                        ${u ? `
+                            <div style="width:36px;height:36px;margin:4px auto;border-radius:50%;background:${u.avatarBg};color:white;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:13px;">${u.avatar}</div>
+                            <div class="text-sm font-bold text-wm-secondary">${u.shortName}</div>
+                            <div class="text-xs text-wm-gray3">${u.roleLabel}</div>
+                        ` : '<div class="text-xs text-wm-gray3">未知</div>'}
+                        <button class="text-xs mt-2" data-act="remove-approver" data-rule-idx="${idx}" data-app-idx="${ai}" style="color:#D64045;text-decoration:underline;">移除</button>
+                    </div>`;
+                }).join('')}
+                <button class="wm-chain-node" data-act="add-approver" data-rule-idx="${idx}" style="min-width:120px;flex:0 1 120px;background:var(--color-bg-alt);border-style:dashed;cursor:pointer;">
+                    <div class="text-3xl text-wm-gray3 py-2">＋</div>
+                    <div class="text-xs text-wm-gray3">添加审批人</div>
+                </button>
+            </div>
+        </div>
+    </div>`;
+}
+
+async function handleAction(act, ri, ai) {
+    if (act === 'delete-rule') {
+        chains[currentType].splice(ri, 1);
+        render();
+    } else if (act === 'remove-approver') {
+        chains[currentType][ri].chain.splice(ai, 1);
+        render();
+    } else if (act === 'add-approver') {
+        const body = `
+            <p class="text-sm mb-3">选择审批人：</p>
+            <select name="approver" class="wm-select">
+                ${window.WM_USERS.map(u =>
+                    `<option value="${u.id}">${u.shortName}（${u.roleLabel}）· ${u.org}</option>`
+                ).join('')}
+            </select>`;
+        const r = await WM_C.modal({ title: '添加审批人', body, confirmText: '添加' });
+        if (r && r.ok) {
+            chains[currentType][ri].chain.push(r.values.approver);
+            render();
+        }
+    }
+}
+
+// Tabs
+document.querySelectorAll('#type-tabs .wm-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('#type-tabs .wm-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentType = tab.getAttribute('data-type');
+        render();
+    });
+});
+
+document.getElementById('btn-add-rule').addEventListener('click', () => {
+    if (!chains[currentType]) chains[currentType] = [];
+    chains[currentType].push({
+        minAmount: 0, maxAmount: 10000,
+        chain: ['U005'],
+        name: '新规则',
+    });
+    render();
+});
+
+document.getElementById('btn-save').addEventListener('click', () => {
+    window.WM_P2.saveChains(chains);
+    window.showToast('✓ 审批流配置已保存', 'success');
+});
+
+document.getElementById('btn-reset').addEventListener('click', async () => {
+    const r = await WM_C.modal({
+        title: '恢复默认配置',
+        body: '<p class="text-sm">将重置所有审批链为系统默认配置，确认继续？</p>',
+        confirmText: '确认恢复',
+    });
+    if (r && r.ok) {
+        localStorage.removeItem('wm_p2_seed');
+        window.WM_P2._init();
+        chains = JSON.parse(JSON.stringify(window.WM_P2.getChains()));
+        render();
+        window.showToast('✓ 已恢复默认配置', 'success');
+    }
+});
+
+render();
+</script>
+</body>
+</html>

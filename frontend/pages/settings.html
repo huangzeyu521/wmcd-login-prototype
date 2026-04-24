@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>系统设置 - 皖美信用</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="../assets/css/shared.css?v=gap1">
+<link rel="stylesheet" href="../assets/css/mvp.css?v=gap1">
+<link rel="stylesheet" href="../assets/css/ai.css?v=gap1">
+<script src="../assets/js/shared.js?v=gap1"></script>
+<script src="../assets/js/interactions.js?v=gap1"></script>
+<script src="../assets/js/mock-data.js?v=gap1"></script>
+<script src="../assets/js/auth.js?v=gap1"></script>
+<script src="../assets/js/tickets.js?v=gap1"></script>
+<script src="../assets/js/phase2.js?v=gap1"></script>
+<script src="../assets/js/components.js?v=gap1"></script>
+<script src="../assets/js/ai-client.js?v=gap1"></script>
+<style>
+  .set-section { padding: 22px 24px; border-bottom: 1px dashed var(--color-border); }
+  .set-section:last-child { border-bottom: none; }
+  .set-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+  }
+  .set-row .label { font-size: 13px; color: var(--color-text); }
+  .set-row .desc { font-size: 11px; color: var(--color-text-3); margin-top: 2px; }
+  .set-btn-group { display: inline-flex; border: 1px solid var(--color-border); border-radius: 4px; overflow: hidden; }
+  .set-btn-group button {
+    padding: 6px 14px;
+    background: #FFF;
+    border: none;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all .2s;
+    color: var(--color-text);
+  }
+  .set-btn-group button.active {
+    background: var(--color-primary);
+    color: #FFF;
+  }
+  .set-btn-group button + button { border-left: 1px solid var(--color-border); }
+  .set-btn-group button.active + button,
+  .set-btn-group button + button.active { border-left-color: var(--color-primary); }
+
+  /* 字号预览 */
+  .fontsize-preview {
+    padding: 14px;
+    background: #FAFAF7;
+    border-left: 3px solid var(--color-accent);
+    border-radius: 3px;
+    margin-top: 10px;
+  }
+</style>
+</head>
+<body class="bg-wm-bg">
+<script>if (!window.WM_AUTH.guard()) throw new Error('not logged in');</script>
+
+<div id="topbar-root"></div>
+<script>document.getElementById('topbar-root').outerHTML = WM_C.renderAuthTopbar('settings');</script>
+
+<main class="px-8 py-6 max-w-[1100px] mx-auto">
+    <h1 class="text-2xl font-bold text-wm-secondary mb-1">⚙️ 系统设置</h1>
+    <div class="text-xs text-wm-gray3 mb-5">外观偏好 · 通知 · 无障碍 · 隐私合规 · 数据管理</div>
+
+    <!-- 外观 -->
+    <div class="wm-card mb-5">
+        <div class="wm-card-header"><h3>🎨 外观与显示</h3></div>
+
+        <div class="set-section">
+            <div class="set-row">
+                <div>
+                    <div class="label">主题模式</div>
+                    <div class="desc">深色沉浸版（大屏展示）/ 浅色稳重版（日常办公）/ 跟随系统</div>
+                </div>
+                <div class="set-btn-group" data-setting="theme">
+                    <button data-value="light">☀ 浅色</button>
+                    <button data-value="dark">🌙 深色</button>
+                    <button data-value="auto">自动</button>
+                </div>
+            </div>
+
+            <div class="set-row">
+                <div>
+                    <div class="label">字号</div>
+                    <div class="desc">适配国资老同志阅读习惯 · WCAG 2.1 AA 无障碍</div>
+                </div>
+                <div class="set-btn-group" data-setting="fontsize">
+                    <button data-value="sm">小</button>
+                    <button data-value="md">中（默认）</button>
+                    <button data-value="lg">大</button>
+                    <button data-value="xl">特大</button>
+                </div>
+            </div>
+            <div class="fontsize-preview" id="fontsize-preview">
+                预览效果：<strong>安徽省国资委监管</strong> · 皖美信用平台 V2.0 · 2026 年 4 月
+            </div>
+
+            <div class="set-row">
+                <div>
+                    <div class="label">高对比度</div>
+                    <div class="desc">提升色盲/弱视用户可读性</div>
+                </div>
+                <label class="wm-switch"><input type="checkbox" data-setting="contrast"><span class="wm-switch-slider"></span></label>
+            </div>
+
+            <div class="set-row">
+                <div>
+                    <div class="label">减弱动画</div>
+                    <div class="desc">对应 prefers-reduced-motion · 避免眩晕</div>
+                </div>
+                <label class="wm-switch"><input type="checkbox" data-setting="reduceMotion"><span class="wm-switch-slider"></span></label>
+            </div>
+
+            <div class="set-row">
+                <div>
+                    <div class="label">语言</div>
+                    <div class="desc">当前仅支持简体中文（繁体/English 规划中）</div>
+                </div>
+                <div class="set-btn-group" data-setting="lang">
+                    <button data-value="zh-CN" class="active">简体中文</button>
+                    <button data-value="zh-TW" disabled style="opacity:.5;">繁體（规划）</button>
+                    <button data-value="en" disabled style="opacity:.5;">English（规划）</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通知 -->
+    <div class="wm-card mb-5">
+        <div class="wm-card-header"><h3>🔔 通知偏好</h3></div>
+        <div class="set-section">
+            <div class="set-row">
+                <div><div class="label">消息中心</div><div class="desc">系统消息 · 单据通知 · 审批提醒</div></div>
+                <label class="wm-switch"><input type="checkbox" data-setting="notify_msg" checked><span class="wm-switch-slider"></span></label>
+            </div>
+            <div class="set-row">
+                <div><div class="label">桌面推送</div><div class="desc">浏览器原生通知（需授权）</div></div>
+                <label class="wm-switch"><input type="checkbox" data-setting="notify_push"><span class="wm-switch-slider"></span></label>
+            </div>
+            <div class="set-row">
+                <div><div class="label">邮件通知</div><div class="desc">重要单据/审批/风险预警抄送邮箱</div></div>
+                <label class="wm-switch"><input type="checkbox" data-setting="notify_mail" checked><span class="wm-switch-slider"></span></label>
+            </div>
+            <div class="set-row">
+                <div><div class="label">短信通知</div><div class="desc">仅高优风险预警触发</div></div>
+                <label class="wm-switch"><input type="checkbox" data-setting="notify_sms"><span class="wm-switch-slider"></span></label>
+            </div>
+            <div class="set-row">
+                <div><div class="label">声音提示</div><div class="desc">AI 助手 / 预警新消息</div></div>
+                <label class="wm-switch"><input type="checkbox" data-setting="notify_sound"><span class="wm-switch-slider"></span></label>
+            </div>
+        </div>
+    </div>
+
+    <!-- 隐私合规 -->
+    <div class="wm-card mb-5">
+        <div class="wm-card-header"><h3>🛡 隐私与合规</h3></div>
+        <div class="set-section">
+            <div class="p-3 rounded mb-3" style="background:rgba(184,20,26,0.04);border-left:3px solid var(--color-primary);font-size:12px;line-height:1.8;">
+                本平台受《数据安全法》《网络安全法》《个人信息保护法》及《国有企业数据资产监督管理办法》保护。
+                依据等保三级要求，所有用户操作均被全量审计留痕，用户不可修改或删除个人审计日志。
+            </div>
+            <div class="set-row">
+                <div><div class="label">数据脱敏显示</div><div class="desc">非授权场景自动脱敏敏感字段</div></div>
+                <label class="wm-switch"><input type="checkbox" data-setting="privacy_mask" checked><span class="wm-switch-slider"></span></label>
+            </div>
+            <div class="set-row">
+                <div><div class="label">会话超时自动锁屏</div><div class="desc">无操作 15 分钟后自动锁屏，需重新认证</div></div>
+                <label class="wm-switch"><input type="checkbox" data-setting="privacy_autolock" checked><span class="wm-switch-slider"></span></label>
+            </div>
+            <div class="set-row">
+                <div><div class="label">AI 助手会话记忆</div><div class="desc">允许 AI 助手记忆近 10 轮上下文</div></div>
+                <label class="wm-switch"><input type="checkbox" data-setting="privacy_ai_memory" checked><span class="wm-switch-slider"></span></label>
+            </div>
+        </div>
+    </div>
+
+    <!-- 数据管理 -->
+    <div class="wm-card mb-5">
+        <div class="wm-card-header"><h3>💾 数据管理</h3></div>
+        <div class="set-section">
+            <div class="set-row">
+                <div><div class="label">导出我的数据</div><div class="desc">导出本账户历史操作/单据/报告 · 依据个保法个人信息携带权</div></div>
+                <button class="wm-btn wm-btn-ghost wm-btn-sm" onclick="window.showToast('数据导出中 · 将发送至邮箱','info')">申请导出</button>
+            </div>
+            <div class="set-row">
+                <div><div class="label">清除本地缓存</div><div class="desc">清除浏览器 localStorage（不影响服务端数据）</div></div>
+                <button class="wm-btn wm-btn-ghost wm-btn-sm" id="btn-clear-cache">清除</button>
+            </div>
+            <div class="set-row">
+                <div><div class="label">重置为默认设置</div><div class="desc">所有偏好恢复出厂 · 不会退出登录</div></div>
+                <button class="wm-btn wm-btn-ghost wm-btn-sm" id="btn-reset">重置</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 关于 -->
+    <div class="wm-card mb-5">
+        <div class="wm-card-header"><h3>ℹ 关于</h3></div>
+        <div class="set-section text-xs text-wm-gray3 leading-7">
+            <div>平台名称：皖美信用 · 安徽省国资国企智能平台</div>
+            <div>版本：V2.0 MVP · 构建号：WMCD-20260424</div>
+            <div>主管单位：安徽省人民政府国有资产监督管理委员会</div>
+            <div>承建单位：远景赋能产业集团 · 中国科学技术大学</div>
+            <div>运维单位：安徽国资数字科技有限公司</div>
+            <div>备案：皖 ICP 备 XXXXX 号 · 皖公网安备 XXXXXXXX 号</div>
+            <div>合规认证：等保三级 · ISO 27001 · 密码应用安全性评估</div>
+        </div>
+    </div>
+</main>
+
+<script>
+(function () {
+    'use strict';
+    const KEY = 'wm_settings_v1';
+
+    function load() {
+        try { return JSON.parse(localStorage.getItem(KEY) || '{}'); }
+        catch (e) { return {}; }
+    }
+    function save(s) { localStorage.setItem(KEY, JSON.stringify(s)); }
+
+    const settings = Object.assign({
+        theme: 'light',
+        fontsize: 'md',
+        lang: 'zh-CN',
+        contrast: false,
+        reduceMotion: false,
+        notify_msg: true,
+        notify_push: false,
+        notify_mail: true,
+        notify_sms: false,
+        notify_sound: false,
+        privacy_mask: true,
+        privacy_autolock: true,
+        privacy_ai_memory: true,
+    }, load());
+
+    // 应用字号到页面 root（预览）
+    const FONTSIZES = { sm: '12px', md: '14px', lg: '16px', xl: '18px' };
+    function apply() {
+        document.documentElement.style.setProperty('--wm-fontsize', FONTSIZES[settings.fontsize] || '14px');
+        document.getElementById('fontsize-preview').style.fontSize = FONTSIZES[settings.fontsize];
+    }
+    apply();
+
+    // 初始化 UI 状态
+    document.querySelectorAll('[data-setting]').forEach(el => {
+        const key = el.getAttribute('data-setting');
+        if (el.tagName === 'INPUT' && el.type === 'checkbox') {
+            el.checked = !!settings[key];
+            el.addEventListener('change', () => {
+                settings[key] = el.checked;
+                save(settings);
+                window.showToast('设置已保存', 'success');
+            });
+        } else if (el.classList.contains('set-btn-group')) {
+            el.querySelectorAll('button').forEach(btn => {
+                if (btn.getAttribute('data-value') === settings[key]) btn.classList.add('active');
+                btn.addEventListener('click', () => {
+                    if (btn.disabled) return;
+                    el.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    settings[key] = btn.getAttribute('data-value');
+                    save(settings);
+                    apply();
+                    window.showToast('设置已保存', 'success');
+                });
+            });
+        }
+    });
+
+    // 清缓存
+    document.getElementById('btn-clear-cache').addEventListener('click', () => {
+        if (!confirm('确定清除本地缓存？不会退出登录。')) return;
+        const keep = {};
+        ['wm_current_user', KEY].forEach(k => { const v = localStorage.getItem(k); if (v) keep[k] = v; });
+        localStorage.clear();
+        Object.keys(keep).forEach(k => localStorage.setItem(k, keep[k]));
+        window.showToast('本地缓存已清除', 'success');
+    });
+
+    // 重置
+    document.getElementById('btn-reset').addEventListener('click', () => {
+        if (!confirm('确定重置所有偏好？')) return;
+        localStorage.removeItem(KEY);
+        window.showToast('已重置为默认设置', 'success');
+        setTimeout(() => location.reload(), 400);
+    });
+})();
+</script>
+
+<!-- switch 组件样式（如未在 mvp.css 中定义） -->
+<style>
+.wm-switch { display:inline-block; position:relative; width:44px; height:22px; }
+.wm-switch input { opacity:0; width:0; height:0; }
+.wm-switch-slider { position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0;
+    background-color: #D0CCC0; transition: .3s; border-radius:22px; }
+.wm-switch-slider::before { position:absolute; content:""; height:16px; width:16px; left:3px; bottom:3px;
+    background-color:#FFF; transition:.3s; border-radius:50%; }
+.wm-switch input:checked + .wm-switch-slider { background-color: var(--color-primary); }
+.wm-switch input:checked + .wm-switch-slider::before { transform: translateX(22px); }
+</style>
+</body>
+</html>

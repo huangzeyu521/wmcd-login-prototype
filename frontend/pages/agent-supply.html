@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>供应链管理智能体 - 皖美信用</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<link rel="stylesheet" href="../assets/css/shared.css?v=p3.1">
+<script src="../assets/js/shared.js?v=p3.1"></script>
+<script src="../assets/js/interactions.js?v=p3.1"></script>
+<link rel="stylesheet" href="../assets/css/mvp.css?v=p3.1">
+<link rel="stylesheet" href="../assets/css/ai.css?v=p3.1">
+<script src="../assets/js/mock-data.js?v=p3.1"></script>
+<script src="../assets/js/auth.js?v=p3.1"></script>
+<script src="../assets/js/tickets.js?v=p3.1"></script>
+<script src="../assets/js/phase2.js?v=p3.1"></script>
+<script src="../assets/js/components.js?v=p3.1"></script>
+<script src="../assets/js/ai-client.js?v=p3.1"></script>
+
+<style>
+    .breadcrumb { color: var(--color-text-3); font-size: 12px; }
+    .breadcrumb a { color: var(--color-secondary); text-decoration: none; }
+    .breadcrumb a:hover { color: var(--color-primary); }
+    .breadcrumb .sep { margin: 0 6px; color: var(--color-border-2); }
+
+    .lifecycle-stage {
+        flex: 1;
+        padding: 14px;
+        border-radius: var(--radius-md);
+        background: white;
+        border: 1px solid var(--color-border);
+        position: relative;
+        transition: all 0.25s;
+    }
+    .lifecycle-stage:hover {
+        box-shadow: var(--shadow-md);
+        transform: translateY(-2px);
+    }
+    .lifecycle-stage::after {
+        content: "▶";
+        position: absolute;
+        right: -14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--color-accent);
+        font-size: 16px;
+        z-index: 2;
+    }
+    .lifecycle-stage:last-child::after { display: none; }
+    .lifecycle-stage.stage-1 { border-left: 4px solid #2B9348; }
+    .lifecycle-stage.stage-2 { border-left: 4px solid #0F2A56; }
+    .lifecycle-stage.stage-3 { border-left: 4px solid #C9A063; }
+    .lifecycle-stage.stage-4 { border-left: 4px solid #E8A33D; }
+    .lifecycle-stage.stage-5 { border-left: 4px solid #D64045; }
+    .mode-card {
+        padding: 16px;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        background: white;
+        transition: all 0.25s;
+    }
+    .mode-card.smart {
+        border: 1.5px solid var(--color-accent);
+        background: linear-gradient(135deg, rgba(201,160,99,0.05), rgba(184,20,26,0.02));
+    }
+    .mode-card.smart::before {
+        content: "AI智能模式";
+        position: absolute;
+        top: -10px;
+        left: 16px;
+        padding: 2px 10px;
+        background: linear-gradient(135deg, #B8141A, #8A0F14);
+        color: white;
+        font-size: 10px;
+        font-weight: 700;
+        border-radius: 3px;
+        letter-spacing: 1px;
+    }
+</style>
+</head>
+<body class="bg-wm-bg">
+<script>if (!window.WM_AUTH || !window.WM_AUTH.guard()) throw new Error("not logged in");</script>
+
+<div id="topbar-root"></div>
+<script>document.getElementById('topbar-root').outerHTML = WM_C.renderAuthTopbar('supply');</script>
+
+<div class="bg-white border-b border-wm px-8 py-3">
+    <nav class="breadcrumb">
+        <a href="index.html">🏠 首页</a><span class="sep">/</span>
+        <a href="index.html">七大智能体</a><span class="sep">/</span>
+        <span style="color:var(--color-primary);font-weight:600;">🔄 供应链管理智能体</span>
+    </nav>
+</div>
+
+<div class="flex">
+    <aside class="wm-sidebar" style="width:220px;min-height:calc(100vh - 120px);">
+        <div class="p-4 border-b border-wm">
+            <div class="text-xs text-wm-gray3 tracking-widest">AGENT · MODULE</div>
+            <div class="text-base font-bold text-wm-primary mt-1">供应链管理智能体</div>
+            <div class="text-xs text-wm-gray mt-1">Supply Chain Management</div>
+        </div>
+        <div class="py-2">
+            <div class="sb-item active"><span>📚</span> 省级供应商库</div>
+            <div class="sb-item"><span>✨</span> 智能信用准入</div>
+            <div class="sb-item"><span>🔄</span> 全生命周期管理</div>
+            <div class="sb-item"><span>🎯</span> 智能招投标</div>
+            <div class="sb-item"><span>🛡</span> 评标异常检测</div>
+            <div class="sb-item"><span>💰</span> 供应链金融</div>
+            <div class="sb-item"><span>⚠</span> 黑名单联合惩戒</div>
+            <div class="sb-item"><span>🌐</span> 产业链协同</div>
+            <div class="sb-item"><span>📊</span> 供应链韧性</div>
+        </div>
+    </aside>
+
+    <main class="flex-1 p-6" style="min-width:0;">
+        <div class="flex items-center justify-between mb-5">
+            <div>
+                <div class="flex items-center gap-3 mb-1">
+                    <h1 class="text-2xl font-bold text-wm-secondary">供应链协同治理工作台</h1>
+                    <span class="wm-badge" style="background:rgba(168,130,62,0.12);color:#A8823E;border:1px solid #A8823E55;">生态协同治理中心</span>
+                </div>
+                <div class="text-xs text-wm-gray3">Supply Chain Management · 全省标准化供应商库 × AI智能招投标 × 供应链金融</div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button class="wm-btn wm-btn-ghost wm-btn-sm">📋 采购计划</button>
+                <button class="wm-btn wm-btn-ghost wm-btn-sm">🚨 黑名单</button>
+                <button class="wm-btn wm-btn-gold wm-btn-sm">🤖 AI评标</button>
+                <a href="ticket-new.html?type=supply" class="wm-btn wm-btn-primary wm-btn-sm" style="text-decoration:none;">＋ 发布招标</a>
+            </div>
+        </div>
+
+        <!-- 顶部KPI -->
+        <div class="grid grid-cols-6 gap-3 mb-4">
+            <div class="wm-card p-3 text-center">
+                <div class="text-xs text-wm-gray3">标准化供应商</div>
+                <div class="text-2xl font-bold font-mono text-wm-primary">8,642</div>
+                <div class="text-xs text-emerald-600">↑ 186</div>
+            </div>
+            <div class="wm-card p-3 text-center">
+                <div class="text-xs text-wm-gray3">A+/A 评级</div>
+                <div class="text-2xl font-bold font-mono text-emerald-600">62%</div>
+                <div class="text-xs text-wm-gray3">5,357 家</div>
+            </div>
+            <div class="wm-card p-3 text-center">
+                <div class="text-xs text-wm-gray3">本月招标</div>
+                <div class="text-2xl font-bold font-mono text-wm-secondary">326</div>
+                <div class="text-xs text-wm-gray3">标 · 185亿</div>
+            </div>
+            <div class="wm-card p-3 text-center">
+                <div class="text-xs text-wm-gray3">异常检测</div>
+                <div class="text-2xl font-bold font-mono" style="color:#D64045;">28</div>
+                <div class="text-xs text-wm-gray3">嫌疑围标</div>
+            </div>
+            <div class="wm-card p-3 text-center">
+                <div class="text-xs text-wm-gray3">黑名单</div>
+                <div class="text-2xl font-bold font-mono" style="color:#D64045;">186</div>
+                <div class="text-xs text-wm-gray3">家·全省联禁</div>
+            </div>
+            <div class="wm-card p-3 text-center">
+                <div class="text-xs text-wm-gray3">供应链融资</div>
+                <div class="text-2xl font-bold font-mono" style="color:#A8823E;">328</div>
+                <div class="text-xs text-emerald-600">亿元 · 本年</div>
+            </div>
+        </div>
+
+        <!-- 传统 vs 智能模式 -->
+        <div class="wm-card mb-4">
+            <div class="wm-card-header">
+                <h3>管理模式转型 · 传统人工审核 → AI智能管控</h3>
+            </div>
+            <div class="p-5 grid grid-cols-2 gap-6">
+                <div class="mode-card">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="text-xl">🧓</span>
+                        <span class="text-base font-bold text-wm-gray">传统模式（人工审核）</span>
+                    </div>
+                    <ul class="text-xs text-wm-gray space-y-1.5">
+                        <li class="flex items-start gap-2"><span class="text-red-500">✗</span>依赖个人经验，审核标准不一</li>
+                        <li class="flex items-start gap-2"><span class="text-red-500">✗</span>风险研判存在严重滞后性</li>
+                        <li class="flex items-start gap-2"><span class="text-red-500">✗</span>难以察觉隐蔽的"担保圈"</li>
+                        <li class="flex items-start gap-2"><span class="text-red-500">✗</span>复杂的"关联交易"难以识别</li>
+                        <li class="flex items-start gap-2"><span class="text-red-500">✗</span>易受人情干预影响</li>
+                    </ul>
+                </div>
+                <div class="mode-card smart relative">
+                    <div class="flex items-center gap-2 mb-3 mt-2">
+                        <span class="text-xl">🤖</span>
+                        <span class="text-base font-bold text-wm-primary">智能模式（AI智能管控）</span>
+                    </div>
+                    <ul class="text-xs text-wm-gray space-y-1.5">
+                        <li class="flex items-start gap-2"><span class="text-emerald-600">✓</span>基于标准化规则强制执行</li>
+                        <li class="flex items-start gap-2"><span class="text-emerald-600">✓</span>"评标建议自动生成"与"评级规则实时更新"</li>
+                        <li class="flex items-start gap-2"><span class="text-emerald-600">✓</span>大模型全量数据处理，穿透式监管</li>
+                        <li class="flex items-start gap-2"><span class="text-emerald-600">✓</span>NLP+知识图谱识别隐藏关联</li>
+                        <li class="flex items-start gap-2"><span class="text-emerald-600">✓</span>从源头杜绝人情干预</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 五阶段全生命周期管理 -->
+        <div class="wm-card mb-4">
+            <div class="wm-card-header">
+                <h3>供应商全生命周期 · 五阶段智能管理</h3>
+                <span class="wm-badge wm-badge-aaa">准入→合作→评级→预警→退出</span>
+            </div>
+            <div class="p-5">
+                <div class="flex gap-5 items-stretch">
+                    <div class="lifecycle-stage stage-1">
+                        <div class="flex items-center gap-2 mb-2">
+                            <div class="w-7 h-7 rounded-full bg-emerald-500 text-white font-bold flex items-center justify-center text-xs">①</div>
+                            <span class="text-sm font-bold text-emerald-700">准入阶段</span>
+                        </div>
+                        <div class="text-xs text-wm-gray3 mb-2">智能管理动作</div>
+                        <div class="text-xs text-wm-secondary font-semibold mb-2">资质智能核验与预评级</div>
+                        <div class="text-xs text-wm-gray3 mb-1">风险触发</div>
+                        <div class="text-xs text-red-600">发现黑名单记录或严重"担保圈"牵连立即否决</div>
+                    </div>
+                    <div class="lifecycle-stage stage-2">
+                        <div class="flex items-center gap-2 mb-2">
+                            <div class="w-7 h-7 rounded-full bg-blue-800 text-white font-bold flex items-center justify-center text-xs">②</div>
+                            <span class="text-sm font-bold text-wm-secondary">合作阶段</span>
+                        </div>
+                        <div class="text-xs text-wm-gray3 mb-2">智能管理动作</div>
+                        <div class="text-xs text-wm-secondary font-semibold mb-2">履约、交付质量实时监测</div>
+                        <div class="text-xs text-wm-gray3 mb-1">风险触发</div>
+                        <div class="text-xs text-red-600">出现严重"关联交易"异常或资金链紧张信号</div>
+                    </div>
+                    <div class="lifecycle-stage stage-3">
+                        <div class="flex items-center gap-2 mb-2">
+                            <div class="w-7 h-7 rounded-full text-white font-bold flex items-center justify-center text-xs" style="background:#A8823E;">③</div>
+                            <span class="text-sm font-bold" style="color:#A8823E;">评级阶段</span>
+                        </div>
+                        <div class="text-xs text-wm-gray3 mb-2">智能管理动作</div>
+                        <div class="text-xs text-wm-secondary font-semibold mb-2">规则驱动的动态复评</div>
+                        <div class="text-xs text-wm-gray3 mb-1">风险触发</div>
+                        <div class="text-xs text-red-600">信用分值波动超15%自动触发双重审议</div>
+                    </div>
+                    <div class="lifecycle-stage stage-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <div class="w-7 h-7 rounded-full text-white font-bold flex items-center justify-center text-xs" style="background:#E8A33D;">④</div>
+                            <span class="text-sm font-bold" style="color:#B87B2B;">预警阶段</span>
+                        </div>
+                        <div class="text-xs text-wm-gray3 mb-2">智能管理动作</div>
+                        <div class="text-xs text-wm-secondary font-semibold mb-2">分级分类风险信号推送</div>
+                        <div class="text-xs text-wm-gray3 mb-1">风险触发</div>
+                        <div class="text-xs text-red-600">重大负面舆情或法代变动立即锁定权限</div>
+                    </div>
+                    <div class="lifecycle-stage stage-5">
+                        <div class="flex items-center gap-2 mb-2">
+                            <div class="w-7 h-7 rounded-full bg-red-500 text-white font-bold flex items-center justify-center text-xs">⑤</div>
+                            <span class="text-sm font-bold text-red-600">退出阶段</span>
+                        </div>
+                        <div class="text-xs text-wm-gray3 mb-2">智能管理动作</div>
+                        <div class="text-xs text-wm-secondary font-semibold mb-2">自动锁定与全省联合惩戒</div>
+                        <div class="text-xs text-wm-gray3 mb-1">风险触发</div>
+                        <div class="text-xs text-red-600">风险评级跌破安全底线触发强制清退</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 供应商库分布 + 评级体系 -->
+        <div class="grid grid-cols-12 gap-4 mb-4">
+            <!-- 供应商库分布 -->
+            <div class="wm-card col-span-5">
+                <div class="wm-card-header">
+                    <h3>省级标准化供应商库分布</h3>
+                    <span class="text-xs text-wm-gray3">"一处失信、全省受限"</span>
+                </div>
+                <div class="p-4">
+                    <div id="chart-supplier-dist" style="height:300px;"></div>
+                </div>
+            </div>
+
+            <!-- 评价维度 -->
+            <div class="wm-card col-span-4">
+                <div class="wm-card-header"><h3>供应商评估四维度</h3></div>
+                <div class="p-4">
+                    <div id="chart-eval" style="height:300px;"></div>
+                </div>
+            </div>
+
+            <!-- 本月招投标 -->
+            <div class="wm-card col-span-3">
+                <div class="wm-card-header"><h3>本月招投标运行</h3></div>
+                <div class="p-4 space-y-3">
+                    <div class="flex items-center justify-between p-3 rounded" style="background:rgba(184,20,26,0.04);">
+                        <div>
+                            <div class="text-xs text-wm-gray3">已发布标</div>
+                            <div class="text-2xl font-bold font-mono text-wm-primary">326</div>
+                        </div>
+                        <div class="text-wm-primary text-2xl">📋</div>
+                    </div>
+                    <div class="flex items-center justify-between p-3 rounded" style="background:rgba(15,42,86,0.04);">
+                        <div>
+                            <div class="text-xs text-wm-gray3">投标响应</div>
+                            <div class="text-2xl font-bold font-mono text-wm-secondary">2,186</div>
+                        </div>
+                        <div class="text-wm-secondary text-2xl">📥</div>
+                    </div>
+                    <div class="flex items-center justify-between p-3 rounded" style="background:rgba(43,147,72,0.04);">
+                        <div>
+                            <div class="text-xs text-wm-gray3">已中标</div>
+                            <div class="text-2xl font-bold font-mono text-emerald-600">198</div>
+                        </div>
+                        <div class="text-emerald-600 text-2xl">✅</div>
+                    </div>
+                    <div class="flex items-center justify-between p-3 rounded" style="background:rgba(214,64,69,0.05);">
+                        <div>
+                            <div class="text-xs text-wm-gray3">异常拦截</div>
+                            <div class="text-2xl font-bold font-mono text-red-500">28</div>
+                        </div>
+                        <div class="text-red-500 text-2xl">🚨</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI智能招投标 -->
+        <div class="wm-card mb-4">
+            <div class="wm-card-header">
+                <h3>AI智能招投标工作台 · 当前招标</h3>
+                <span class="wm-badge wm-badge-blue">皖能集团 · 光伏设备采购 · 2.8亿</span>
+            </div>
+            <div class="p-4">
+                <table class="wm-table">
+                    <thead>
+                        <tr>
+                            <th>投标方</th><th>资质核验</th><th>信用</th><th>报价(万)</th>
+                            <th>AI评分</th><th>异常检测</th><th>推荐</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bid-rows"></tbody>
+                </table>
+                <div class="mt-3 p-3 rounded" style="background:linear-gradient(135deg,rgba(214,64,69,0.04),rgba(184,20,26,0.02));border-left:3px solid #D64045;">
+                    <div class="text-sm font-semibold text-red-600 mb-1">🚨 AI异常检测预警</div>
+                    <div class="text-xs text-wm-gray">检测到<strong>投标方C</strong>与<strong>投标方D</strong>存在 <strong>相似IP段、同一Office文档作者、报价差异<0.5%</strong>，<strong>围标串标嫌疑度 87%</strong>。已自动锁定两方资格，等待人工复核。</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 供应链金融 + 黑名单 -->
+        <div class="grid grid-cols-12 gap-4">
+            <!-- 供应链金融 -->
+            <div class="wm-card col-span-7">
+                <div class="wm-card-header">
+                    <h3>供应链金融 · 核心国企信用穿透传导</h3>
+                    <span class="wm-badge wm-badge-aaa">本年度服务 5,286 家中小企业</span>
+                </div>
+                <div class="p-4 grid grid-cols-3 gap-3 mb-3">
+                    <div class="p-3 rounded border border-wm" style="background:linear-gradient(180deg,rgba(184,20,26,0.04),#FFFFFF);">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-xl">💰</span>
+                            <span class="text-sm font-bold text-wm-primary">应付账款融资</span>
+                        </div>
+                        <div class="text-xs text-wm-gray mb-2">基于国企确权，缓解供应商资金压力</div>
+                        <div class="flex items-baseline justify-between">
+                            <span class="text-2xl font-bold font-mono text-wm-primary">168</span>
+                            <span class="text-xs text-wm-gray3">亿 · 今年</span>
+                        </div>
+                    </div>
+                    <div class="p-3 rounded border border-wm" style="background:linear-gradient(180deg,rgba(15,42,86,0.04),#FFFFFF);">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-xl">📦</span>
+                            <span class="text-sm font-bold text-wm-secondary">订单融资</span>
+                        </div>
+                        <div class="text-xs text-wm-gray mb-2">为高信用供应商提供前期生产流动性</div>
+                        <div class="flex items-baseline justify-between">
+                            <span class="text-2xl font-bold font-mono text-wm-secondary">98</span>
+                            <span class="text-xs text-wm-gray3">亿 · 今年</span>
+                        </div>
+                    </div>
+                    <div class="p-3 rounded border border-wm" style="background:linear-gradient(180deg,rgba(201,160,99,0.06),#FFFFFF);">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-xl">🏬</span>
+                            <span class="text-sm font-bold" style="color:#A8823E;">仓单融资</span>
+                        </div>
+                        <div class="text-xs text-wm-gray mb-2">基于仓单质押，提高存货周转效率</div>
+                        <div class="flex items-baseline justify-between">
+                            <span class="text-2xl font-bold font-mono" style="color:#A8823E;">62</span>
+                            <span class="text-xs text-wm-gray3">亿 · 今年</span>
+                        </div>
+                    </div>
+                </div>
+                <div id="chart-finance" style="height:200px;"></div>
+            </div>
+
+            <!-- 黑名单联合惩戒 -->
+            <div class="wm-card col-span-5">
+                <div class="wm-card-header">
+                    <h3>黑名单联合惩戒</h3>
+                    <span class="wm-badge" style="background:rgba(214,64,69,0.1);color:#D64045;border:1px solid #D6404555;">一处失信·全省受限</span>
+                </div>
+                <div class="p-4" style="max-height:330px;overflow-y:auto;">
+                    <table class="wm-table">
+                        <thead><tr><th>企业</th><th>失信原因</th><th>封禁期</th><th>状态</th></tr></thead>
+                        <tbody id="blacklist-rows"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<div id="footer-root"></div>
+<script>document.getElementById('footer-root').outerHTML = renderFooter();</script>
+
+<script>
+// 供应商分布
+(function(){
+    const chart = echarts.init(document.getElementById('chart-supplier-dist'));
+    chart.setOption({
+        tooltip: { trigger:'item', formatter:'{b}<br/>{c} 家 ({d}%)' },
+        legend: { orient:'vertical', right:0, top:'center', textStyle:{fontSize:11} },
+        color: ['#2B9348', '#C9A063', '#0F2A56', '#E8A33D', '#D64045'],
+        series: [{
+            type: 'pie',
+            radius: ['42%', '70%'],
+            center: ['40%','50%'],
+            label: { formatter: '{b}\n{d}%', fontSize: 11 },
+            data: [
+                { value: 2286, name: 'A+ 战略' },
+                { value: 3071, name: 'A  优选' },
+                { value: 2452, name: 'B  一般' },
+                { value: 647, name: 'C  观察' },
+                { value: 186, name: '黑名单' }
+            ]
+        }]
+    });
+    window.addEventListener('resize', () => chart.resize());
+})();
+
+// 评价维度
+(function(){
+    const chart = echarts.init(document.getElementById('chart-eval'));
+    chart.setOption({
+        tooltip: {},
+        radar: {
+            indicator: [
+                { name:'工商与合规', max:100 },
+                { name:'财务状况', max:100 },
+                { name:'履约记录', max:100 },
+                { name:'特定风险(担保圈)', max:100 }
+            ],
+            radius: '66%',
+            splitArea: { areaStyle: { color: ['rgba(201,160,99,0.03)', 'rgba(15,42,86,0.02)'] } },
+            axisName: { color: '#4A4A4A', fontSize: 11, fontWeight: 600 },
+            splitLine: { lineStyle: { color: '#D4CEB8' } }
+        },
+        series: [{
+            type: 'radar',
+            data: [
+                { value: [92, 88, 94, 85], name: '全库均值',
+                  areaStyle: { color: 'rgba(184, 20, 26, 0.2)' },
+                  lineStyle: { color: '#B8141A', width: 2 },
+                  itemStyle: { color: '#B8141A' } }
+            ]
+        }]
+    });
+    window.addEventListener('resize', () => chart.resize());
+})();
+
+// 招投标详情
+(function(){
+    const bidders = [
+        { n:'安徽XX光伏 A', qual:'✓', credit:'AA', price:'27,800', ai:92, anom:'无', rec:'推荐' },
+        { n:'江苏XX新能源 B', qual:'✓', credit:'AA-', price:'28,150', ai:88, anom:'无', rec:'备选' },
+        { n:'山东XX太阳能 C', qual:'⚠', credit:'BBB', price:'27,900', ai:62, anom:'围标嫌疑', rec:'拦截' },
+        { n:'浙江XX能源 D', qual:'⚠', credit:'BBB', price:'28,000', ai:58, anom:'关联嫌疑', rec:'拦截' },
+        { n:'广东XX光电 E', qual:'✓', credit:'A', price:'28,380', ai:82, anom:'无', rec:'备选' },
+        { n:'福建XX新能 F', qual:'✓', credit:'A+', price:'28,480', ai:86, anom:'无', rec:'备选' }
+    ];
+    document.getElementById('bid-rows').innerHTML = bidders.map(b => `
+        <tr style="${b.rec==='拦截'?'background:rgba(214,64,69,0.06);':''}">
+            <td class="font-semibold text-wm-secondary text-xs">${b.n}</td>
+            <td class="font-mono ${b.qual==='✓'?'text-emerald-600':'text-red-500'}">${b.qual}</td>
+            <td><span class="wm-badge ${b.credit.startsWith('AA')?'wm-badge-aaa':b.credit.startsWith('A')?'wm-badge-blue':'wm-badge-orange'}">${b.credit}</span></td>
+            <td class="font-mono">${b.price}</td>
+            <td>
+                <div class="flex items-center gap-2">
+                    <div class="wm-progress" style="width:60px;height:4px;">
+                        <div style="width:${b.ai}%;"></div>
+                    </div>
+                    <span class="font-mono text-xs font-bold" style="color:var(--color-primary);">${b.ai}</span>
+                </div>
+            </td>
+            <td class="text-xs">${b.anom==='无'?'<span class="text-emerald-600">✓ 无异常</span>':'<span class="text-red-500 font-bold">🚨 '+b.anom+'</span>'}</td>
+            <td>${b.rec==='推荐'?'<span class="wm-badge wm-badge-green">推荐中标</span>':b.rec==='备选'?'<span class="wm-badge wm-badge-blue">备选</span>':'<span class="wm-badge" style="background:rgba(214,64,69,0.1);color:#D64045;border:1px solid #D6404555;">🚫 拦截</span>'}</td>
+        </tr>
+    `).join('');
+})();
+
+// 供应链金融趋势
+(function(){
+    const chart = echarts.init(document.getElementById('chart-finance'));
+    chart.setOption({
+        tooltip: { trigger:'axis' },
+        legend: { data:['应付账款','订单','仓单'], top:0, textStyle:{fontSize:10} },
+        grid: { top: 24, right: 15, bottom: 20, left: 40 },
+        xAxis: { type: 'category', data: ['1月','2月','3月','4月'], axisLabel:{fontSize:10} },
+        yAxis: { type: 'value', name:'亿', axisLabel:{fontSize:10}, splitLine:{ lineStyle:{color:'#E5E1D6', type:'dashed'} } },
+        series: [
+            { name:'应付账款', type:'bar', stack:'fin', data:[38,42,45,43], itemStyle:{color:'#B8141A'}, barWidth: 30 },
+            { name:'订单', type:'bar', stack:'fin', data:[22,24,26,26], itemStyle:{color:'#0F2A56'}, barWidth: 30 },
+            { name:'仓单', type:'bar', stack:'fin', data:[14,15,17,16], itemStyle:{color:'#C9A063'}, barWidth: 30 }
+        ]
+    });
+    window.addEventListener('resize', () => chart.resize());
+})();
+
+// 黑名单
+(function(){
+    const data = [
+        { n:'XX建材公司', r:'重大履约违约', p:'永久', s:'永久封禁' },
+        { n:'XX工程公司', r:'围标串标', p:'3年', s:'封禁中' },
+        { n:'XX贸易公司', r:'虚假资质', p:'永久', s:'永久封禁' },
+        { n:'XX设备公司', r:'质量严重问题', p:'2年', s:'封禁中' },
+        { n:'XX服务公司', r:'行政处罚重大', p:'1年', s:'封禁中' },
+        { n:'XX运输公司', r:'安全事故责任', p:'3年', s:'封禁中' },
+        { n:'XX咨询公司', r:'关联交易违规', p:'2年', s:'封禁中' }
+    ];
+    document.getElementById('blacklist-rows').innerHTML = data.map(d => `
+        <tr>
+            <td class="text-xs font-semibold text-wm-secondary">${d.n}</td>
+            <td class="text-xs text-wm-gray">${d.r}</td>
+            <td class="text-xs font-mono ${d.p==='永久'?'text-red-600 font-bold':''}">${d.p}</td>
+            <td><span class="wm-badge" style="background:rgba(214,64,69,0.1);color:#D64045;border:1px solid #D6404555;">${d.s}</span></td>
+        </tr>
+    `).join('');
+})();
+</script>
+<script>if (window.WM_C && window.WM_C.bindRoleSwitcher) WM_C.bindRoleSwitcher();</script>
+</body>
+</html>

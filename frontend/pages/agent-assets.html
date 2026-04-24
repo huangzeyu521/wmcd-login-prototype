@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>三资盘活智能体 - 皖美信用</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<link rel="stylesheet" href="../assets/css/shared.css?v=p3.1">
+<script src="../assets/js/shared.js?v=p3.1"></script>
+<script src="../assets/js/interactions.js?v=p3.1"></script>
+<link rel="stylesheet" href="../assets/css/mvp.css?v=p3.1">
+<link rel="stylesheet" href="../assets/css/ai.css?v=p3.1">
+<script src="../assets/js/mock-data.js?v=p3.1"></script>
+<script src="../assets/js/auth.js?v=p3.1"></script>
+<script src="../assets/js/tickets.js?v=p3.1"></script>
+<script src="../assets/js/phase2.js?v=p3.1"></script>
+<script src="../assets/js/components.js?v=p3.1"></script>
+<script src="../assets/js/ai-client.js?v=p3.1"></script>
+
+<style>
+    .breadcrumb { color: var(--color-text-3); font-size: 12px; }
+    .breadcrumb a { color: var(--color-secondary); text-decoration: none; }
+    .breadcrumb a:hover { color: var(--color-primary); }
+    .breadcrumb .sep { margin: 0 6px; color: var(--color-border-2); }
+
+    .process-step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        flex: 1;
+        position: relative;
+        padding: 0 8px;
+    }
+    .process-step::after {
+        content: "";
+        position: absolute;
+        top: 24px;
+        left: 50%;
+        right: -50%;
+        height: 2px;
+        background: linear-gradient(90deg, var(--color-accent), var(--color-accent)50);
+    }
+    .process-step:last-child::after { display: none; }
+    .process-step .circle {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        background: linear-gradient(135deg, #C9A063, #A8823E);
+        color: white;
+        font-weight: 700;
+        border: 3px solid white;
+        box-shadow: 0 2px 6px rgba(168, 130, 62, 0.3);
+        margin-bottom: 8px;
+        position: relative;
+        z-index: 2;
+    }
+    .asset-card {
+        padding: 16px;
+        background: white;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        transition: all 0.25s;
+    }
+    .asset-card:hover {
+        border-color: var(--color-accent);
+        box-shadow: var(--shadow-md);
+    }
+    .plan-panel {
+        padding: 14px;
+        background: linear-gradient(180deg, #FAFAF7, #FFFFFF);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+    }
+</style>
+</head>
+<body class="bg-wm-bg">
+<script>if (!window.WM_AUTH || !window.WM_AUTH.guard()) throw new Error("not logged in");</script>
+
+<div id="topbar-root"></div>
+<script>document.getElementById('topbar-root').outerHTML = WM_C.renderAuthTopbar('assets');</script>
+
+<div class="bg-white border-b border-wm px-8 py-3">
+    <nav class="breadcrumb">
+        <a href="index.html">🏠 首页</a><span class="sep">/</span>
+        <a href="index.html">七大智能体</a><span class="sep">/</span>
+        <span style="color:var(--color-primary);font-weight:600;">🏗 三资盘活智能体</span>
+    </nav>
+</div>
+
+<div class="flex">
+    <aside class="wm-sidebar" style="width:220px;min-height:calc(100vh - 120px);">
+        <div class="p-4 border-b border-wm">
+            <div class="text-xs text-wm-gray3 tracking-widest">AGENT · MODULE</div>
+            <div class="text-base font-bold text-wm-primary mt-1">三资盘活智能体</div>
+            <div class="text-xs text-wm-gray mt-1">Assets Activation · 产投中枢</div>
+        </div>
+        <div class="py-2">
+            <div class="sb-item active"><span>🗺</span> 三资一张图</div>
+            <div class="sb-item"><span>💎</span> 资产智能估值</div>
+            <div class="sb-item"><span>✨</span> 盘活方案设计</div>
+            <div class="sb-item"><span>📉</span> 方案模拟引擎</div>
+            <div class="sb-item"><span>📚</span> 案例库匹配</div>
+            <div class="sb-item"><span>📜</span> 证券化产品库</div>
+            <div class="sb-item"><span>💾</span> 数据资产入表</div>
+            <div class="sb-item"><span>🏢</span> 资金池管理</div>
+            <div class="sb-item"><span>📈</span> 盘活效果跟踪</div>
+        </div>
+    </aside>
+
+    <main class="flex-1 p-6" style="min-width:0;">
+        <div class="flex items-center justify-between mb-5">
+            <div>
+                <div class="flex items-center gap-3 mb-1">
+                    <h1 class="text-2xl font-bold text-wm-secondary">三资盘活工作台</h1>
+                    <span class="wm-badge" style="background:rgba(201,160,99,0.12);color:#A8823E;border:1px solid #C9A06355;">数字化产投智能中枢</span>
+                </div>
+                <div class="text-xs text-wm-gray3">Assets Activation · 资源资产化 × 资产证券化 × 资金杠杆化</div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button class="wm-btn wm-btn-ghost wm-btn-sm">📦 全部案例</button>
+                <button class="wm-btn wm-btn-ghost wm-btn-sm">💎 三资估值</button>
+                <button class="wm-btn wm-btn-gold wm-btn-sm">🤖 AI方案</button>
+                <a href="ticket-new.html?type=assets" class="wm-btn wm-btn-primary wm-btn-sm" style="text-decoration:none;">＋ 新建盘活项目</a>
+            </div>
+        </div>
+
+        <!-- 标准化五步实施流程 -->
+        <div class="wm-card mb-4" style="background:linear-gradient(135deg,rgba(201,160,99,0.04),rgba(15,42,86,0.02));">
+            <div class="p-5">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-baseline gap-2">
+                        <h3 class="text-base font-bold text-wm-secondary">标准化五步实施流程</h3>
+                        <span class="text-xs text-wm-gray3">Data → Model → Path → Sim → Capital</span>
+                    </div>
+                    <span class="wm-badge wm-badge-aaa">远东信用方法论</span>
+                </div>
+                <div class="flex items-start">
+                    <div class="process-step">
+                        <div class="circle">①</div>
+                        <div class="text-sm font-bold text-wm-secondary">数据资产化</div>
+                        <div class="text-xs text-wm-gray3 mt-1 text-center">三资底数全量数字化归集</div>
+                    </div>
+                    <div class="process-step">
+                        <div class="circle">②</div>
+                        <div class="text-sm font-bold text-wm-secondary">模型评估</div>
+                        <div class="text-xs text-wm-gray3 mt-1 text-center">嵌入行业标准规则分类估值</div>
+                    </div>
+                    <div class="process-step">
+                        <div class="circle">③</div>
+                        <div class="text-sm font-bold text-wm-secondary">路径智选</div>
+                        <div class="text-xs text-wm-gray3 mt-1 text-center">匹配最优案例生成定制方案</div>
+                    </div>
+                    <div class="process-step">
+                        <div class="circle">④</div>
+                        <div class="text-sm font-bold text-wm-secondary">模拟验证</div>
+                        <div class="text-xs text-wm-gray3 mt-1 text-center">量化模拟收益可视化汇报</div>
+                    </div>
+                    <div class="process-step">
+                        <div class="circle">⑤</div>
+                        <div class="text-sm font-bold text-wm-secondary">资本落地</div>
+                        <div class="text-xs text-wm-gray3 mt-1 text-center">对接融资通道推动落地</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 三资一张图 + 盘活规模 -->
+        <div class="grid grid-cols-12 gap-4 mb-4">
+            <!-- 三资统筹 -->
+            <div class="wm-card col-span-8">
+                <div class="wm-card-header">
+                    <h3>三资一张图 · 资金/资产/资源全景</h3>
+                    <div class="flex gap-2">
+                        <button class="wm-btn wm-btn-primary wm-btn-sm" style="padding:3px 10px;">全省</button>
+                        <button class="wm-btn wm-btn-ghost wm-btn-sm" style="padding:3px 10px;">省属</button>
+                        <button class="wm-btn wm-btn-ghost wm-btn-sm" style="padding:3px 10px;">市属</button>
+                    </div>
+                </div>
+                <div class="p-4">
+                    <div id="chart-tree" style="height:360px;"></div>
+                </div>
+            </div>
+
+            <!-- 盘活成效 -->
+            <div class="wm-card col-span-4">
+                <div class="wm-card-header"><h3>盘活规模统计</h3></div>
+                <div class="p-4 space-y-3">
+                    <div class="asset-card" style="border-left:4px solid #B8141A;">
+                        <div class="text-xs text-wm-gray3">累计盘活规模</div>
+                        <div class="flex items-baseline gap-2 mt-1">
+                            <span class="text-3xl font-bold font-mono text-wm-primary">587</span>
+                            <span class="text-sm text-wm-gray">亿元</span>
+                        </div>
+                        <div class="text-xs text-emerald-600 mt-1">↑ 31.5% YoY</div>
+                    </div>
+                    <div class="asset-card" style="border-left:4px solid #0F2A56;">
+                        <div class="text-xs text-wm-gray3">盘活项目数</div>
+                        <div class="flex items-baseline gap-2 mt-1">
+                            <span class="text-3xl font-bold font-mono text-wm-secondary">186</span>
+                            <span class="text-sm text-wm-gray">个</span>
+                        </div>
+                        <div class="text-xs text-emerald-600 mt-1">↑ 42 新增</div>
+                    </div>
+                    <div class="asset-card" style="border-left:4px solid #C9A063;">
+                        <div class="text-xs text-wm-gray3">平均IRR</div>
+                        <div class="flex items-baseline gap-2 mt-1">
+                            <span class="text-3xl font-bold font-mono" style="color:#A8823E;">12.6</span>
+                            <span class="text-sm text-wm-gray">%</span>
+                        </div>
+                        <div class="text-xs text-wm-gray3 mt-1">优于基准 3.2pct</div>
+                    </div>
+                    <div class="asset-card" style="border-left:4px solid #2B9348;">
+                        <div class="text-xs text-wm-gray3">资产周转率提升</div>
+                        <div class="flex items-baseline gap-2 mt-1">
+                            <span class="text-3xl font-bold font-mono text-emerald-600">+18</span>
+                            <span class="text-sm text-wm-gray">%</span>
+                        </div>
+                        <div class="text-xs text-wm-gray3 mt-1">较盘活前</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 资产智能估值 + 方案模拟 -->
+        <div class="grid grid-cols-12 gap-4 mb-4">
+            <!-- 估值模型三法融合 -->
+            <div class="wm-card col-span-5">
+                <div class="wm-card-header">
+                    <h3>资产智能估值 · 三法融合</h3>
+                    <span class="wm-badge wm-badge-aaa">皖能集团合肥产业园</span>
+                </div>
+                <div class="p-4">
+                    <div id="chart-valuation" style="height:280px;"></div>
+                    <div class="mt-3 pt-3 border-t border-wm grid grid-cols-3 gap-2 text-center">
+                        <div><div class="text-xs text-wm-gray3">收益法</div><div class="text-base font-bold font-mono text-wm-primary">18.6 亿</div></div>
+                        <div><div class="text-xs text-wm-gray3">市场法</div><div class="text-base font-bold font-mono text-wm-secondary">19.2 亿</div></div>
+                        <div><div class="text-xs text-wm-gray3">成本法</div><div class="text-base font-bold font-mono" style="color:#A8823E;">17.8 亿</div></div>
+                    </div>
+                    <div class="mt-2 p-3 rounded" style="background:linear-gradient(135deg,rgba(184,20,26,0.05),rgba(201,160,99,0.05));">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm font-semibold text-wm-secondary">AI综合估值</span>
+                            <span class="text-xl font-bold font-mono text-wm-primary">18.7 亿</span>
+                        </div>
+                        <div class="text-xs text-wm-gray3 mt-1">权重：收益法50%·市场法30%·成本法20%</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 方案模拟 -->
+            <div class="wm-card col-span-7">
+                <div class="wm-card-header">
+                    <h3>盘活方案模拟 · 全品类智能推荐</h3>
+                    <span class="text-xs text-wm-gray3">基于 <span class="font-bold">远东信用</span> 全国案例库 · 匹配 <span class="font-mono font-bold text-wm-primary">87</span> 个相似案例</span>
+                </div>
+                <div class="p-4 grid grid-cols-3 gap-3">
+                    <div class="plan-panel" style="border-left:3px solid #B8141A;">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-bold text-wm-primary">方案A · 类REITs</span>
+                            <span class="wm-badge wm-badge-red">推荐</span>
+                        </div>
+                        <div class="text-xs text-wm-gray mb-2">产业园REITs证券化，首期发行规模18亿，期限10年+存续期</div>
+                        <div class="grid grid-cols-2 gap-1 text-xs">
+                            <div><span class="text-wm-gray3">IRR</span><br><span class="font-mono font-bold text-wm-primary">13.8%</span></div>
+                            <div><span class="text-wm-gray3">杠杆</span><br><span class="font-mono">1:2.5</span></div>
+                            <div><span class="text-wm-gray3">现金流改善</span><br><span class="font-mono text-emerald-600">+18亿</span></div>
+                            <div><span class="text-wm-gray3">匹配案例</span><br><span class="font-mono">34个</span></div>
+                        </div>
+                    </div>
+                    <div class="plan-panel" style="border-left:3px solid #0F2A56;">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-bold text-wm-secondary">方案B · ABS</span>
+                            <span class="wm-badge wm-badge-blue">备选</span>
+                        </div>
+                        <div class="text-xs text-wm-gray mb-2">以租金现金流为底层资产发行ABS，规模15亿，期限5年</div>
+                        <div class="grid grid-cols-2 gap-1 text-xs">
+                            <div><span class="text-wm-gray3">IRR</span><br><span class="font-mono font-bold text-wm-secondary">11.2%</span></div>
+                            <div><span class="text-wm-gray3">杠杆</span><br><span class="font-mono">1:2.0</span></div>
+                            <div><span class="text-wm-gray3">现金流改善</span><br><span class="font-mono text-emerald-600">+15亿</span></div>
+                            <div><span class="text-wm-gray3">匹配案例</span><br><span class="font-mono">28个</span></div>
+                        </div>
+                    </div>
+                    <div class="plan-panel" style="border-left:3px solid #C9A063;">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-bold" style="color:#A8823E;">方案C · 持有型ABS</span>
+                            <span class="wm-badge wm-badge-orange">创新</span>
+                        </div>
+                        <div class="text-xs text-wm-gray mb-2">2025年市场首单成功落地，持有型ABS创新型 11亿</div>
+                        <div class="grid grid-cols-2 gap-1 text-xs">
+                            <div><span class="text-wm-gray3">IRR</span><br><span class="font-mono font-bold" style="color:#A8823E;">14.5%</span></div>
+                            <div><span class="text-wm-gray3">杠杆</span><br><span class="font-mono">1:1.8</span></div>
+                            <div><span class="text-wm-gray3">现金流改善</span><br><span class="font-mono text-emerald-600">+11亿</span></div>
+                            <div><span class="text-wm-gray3">匹配案例</span><br><span class="font-mono">6个</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 模拟效果曲线 -->
+                <div class="mt-4 p-3 rounded border border-wm">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-sm font-semibold text-wm-secondary">方案A · 10年现金流模拟</span>
+                        <span class="text-xs text-wm-gray3">杠杆率变化 · 资产收益率曲线</span>
+                    </div>
+                    <div id="chart-sim" style="height:180px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 全品类盘活路径 + 证券化工具 -->
+        <div class="grid grid-cols-12 gap-4 mb-4">
+            <!-- 全品类盘活路径 -->
+            <div class="wm-card col-span-7">
+                <div class="wm-card-header">
+                    <h3>全品类盘活路径矩阵</h3>
+                </div>
+                <div class="p-4">
+                    <table class="wm-table">
+                        <thead>
+                            <tr>
+                                <th>盘活方向</th><th>具体方案</th><th>典型场景</th><th>平均IRR</th><th>周期</th><th>案例数</th>
+                            </tr>
+                        </thead>
+                        <tbody id="paths-rows"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 数据资产ABS -->
+            <div class="wm-card col-span-5">
+                <div class="wm-card-header">
+                    <h3>数据资产ABS创新 · 2025全国首单</h3>
+                    <span class="wm-badge wm-badge-aaa">新赛道</span>
+                </div>
+                <div class="p-4">
+                    <div class="text-xs text-wm-gray mb-3 leading-relaxed">
+                        天风中投保应收账款2期（数据资产赋能）于2025年7月成功落地，为全国首单数据资产赋能ABS。2025年全市场发行7单，累计规模<strong class="text-wm-primary font-mono">24.90亿</strong>（其中6单为国央企发行）。
+                    </div>
+                    <div id="chart-data-abs" style="height:180px;"></div>
+                    <div class="mt-3 p-3 rounded" style="background:linear-gradient(135deg,rgba(201,160,99,0.08),rgba(184,20,26,0.04));">
+                        <div class="text-xs text-wm-gray3">安徽国资数据资产潜在规模</div>
+                        <div class="text-2xl font-bold font-mono text-wm-primary">~<span style="color:#A8823E;">120</span> 亿</div>
+                        <div class="text-xs text-wm-gray mt-1">皖能/江汽/古井贡等10家省属国企数据入表试点</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 案例库 + AI联动 -->
+        <div class="grid grid-cols-12 gap-4">
+            <!-- 案例库 -->
+            <div class="wm-card col-span-7">
+                <div class="wm-card-header">
+                    <h3>全国国资三资盘活案例库</h3>
+                    <span class="text-xs text-wm-gray3">累计 <span class="font-mono font-bold text-wm-primary">1,862</span> 个案例 · 智能匹配Top 5</span>
+                </div>
+                <div class="p-4">
+                    <table class="wm-table">
+                        <thead>
+                            <tr><th>案例</th><th>主体</th><th>资产类型</th><th>方案</th><th>规模</th><th>IRR</th><th>相似度</th></tr>
+                        </thead>
+                        <tbody id="cases-rows"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 跨智能体联动 -->
+            <div class="wm-card col-span-5">
+                <div class="wm-card-header">
+                    <h3>跨智能体协同联动</h3>
+                    <span class="text-xs text-wm-gray3">"资产+信用+融资"闭环</span>
+                </div>
+                <div class="p-4 space-y-3">
+                    <div class="p-3 rounded" style="background:rgba(15,42,86,0.04);border-left:3px solid #0F2A56;">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-bold text-wm-secondary">→ 融资支持智能体</span>
+                            <span class="wm-badge wm-badge-blue">已联动</span>
+                        </div>
+                        <div class="text-xs text-wm-gray">已盘活资产自动转化为合格押品或融资标的，匹配绿色债、科创债等精准金融资源</div>
+                    </div>
+                    <div class="p-3 rounded" style="background:rgba(184,20,26,0.04);border-left:3px solid #B8141A;">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-bold text-wm-primary">→ 风险防控智能体</span>
+                            <span class="wm-badge wm-badge-red">已联动</span>
+                        </div>
+                        <div class="text-xs text-wm-gray">输出估值异常与经营预警数据，实现债务风险的"穿透式监测"</div>
+                    </div>
+                    <div class="p-3 rounded" style="background:rgba(201,160,99,0.06);border-left:3px solid #C9A063;">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-bold" style="color:#A8823E;">→ 投资决策智能体</span>
+                            <span class="wm-badge wm-badge-orange">已联动</span>
+                        </div>
+                        <div class="text-xs text-wm-gray">为并购重组提供底层资产详尽评估，辅助产业"补链强链"战略</div>
+                    </div>
+                    <div class="p-3 rounded" style="background:rgba(43,147,72,0.04);border-left:3px solid #2B9348;">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-bold text-emerald-700">→ 信用优化智能体</span>
+                            <span class="wm-badge wm-badge-green">已联动</span>
+                        </div>
+                        <div class="text-xs text-wm-gray">资产盘活提升企业现金流，动态更新企业信用画像</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<div id="footer-root"></div>
+<script>document.getElementById('footer-root').outerHTML = renderFooter();</script>
+
+<script>
+// 三资一张图 Sunburst
+(function(){
+    const chart = echarts.init(document.getElementById('chart-tree'));
+    chart.setOption({
+        tooltip: { formatter: (p) => `${p.name}<br/>${(p.value||0)} 亿` },
+        series: [{
+            type: 'sunburst',
+            radius: ['15%', '95%'],
+            center: ['50%', '50%'],
+            label: { rotate: 'radial', fontSize: 11 },
+            emphasis: { focus: 'ancestor' },
+            data: [
+                {
+                    name: '三资总量\n3,862亿',
+                    itemStyle: { color: '#B8141A' },
+                    label: { color: 'white', fontWeight: 700 },
+                    children: [
+                        {
+                            name: '资金', value: 1280, itemStyle:{color:'#8A0F14'},
+                            children: [
+                                { name:'资金池', value:580, itemStyle:{color:'#B8141A'} },
+                                { name:'闲置资金', value:380, itemStyle:{color:'#D93B41'} },
+                                { name:'授信额度', value:320, itemStyle:{color:'#E8A33D'} }
+                            ]
+                        },
+                        {
+                            name: '资产', value: 2020, itemStyle:{color:'#0F2A56'},
+                            children: [
+                                { name:'不动产', value:780, itemStyle:{color:'#0F2A56'} },
+                                { name:'设备', value:420, itemStyle:{color:'#1F4A8A'} },
+                                { name:'股权', value:520, itemStyle:{color:'#2E5A87'} },
+                                { name:'无形资产', value:180, itemStyle:{color:'#4A79A8'} },
+                                { name:'数据资产', value:120, itemStyle:{color:'#6D9ACB'} }
+                            ]
+                        },
+                        {
+                            name: '资源', value: 562, itemStyle:{color:'#C9A063'},
+                            children: [
+                                { name:'特许经营权', value:280, itemStyle:{color:'#C9A063'} },
+                                { name:'文旅资源', value:120, itemStyle:{color:'#D4B475'} },
+                                { name:'生态资源', value:85, itemStyle:{color:'#A8823E'} },
+                                { name:'知识产权', value:77, itemStyle:{color:'#8A6A2F'} }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }]
+    });
+    window.addEventListener('resize', () => chart.resize());
+})();
+
+// 三法估值
+(function(){
+    const chart = echarts.init(document.getElementById('chart-valuation'));
+    chart.setOption({
+        tooltip: { trigger: 'axis' },
+        legend: { data:['10年现金流','市场可比','重置成本'], top:0, textStyle:{fontSize:10} },
+        grid: { top: 32, right: 20, bottom: 25, left: 40 },
+        xAxis: { type: 'category', data: ['Y1','Y2','Y3','Y4','Y5','Y6','Y7','Y8','Y9','Y10'], axisLabel:{fontSize:10} },
+        yAxis: { type: 'value', name: '亿', splitLine:{ lineStyle:{ color:'#E5E1D6', type:'dashed' }} },
+        series: [
+            { name:'10年现金流', type:'line', smooth:true, data:[1.2,1.5,1.8,2.0,2.2,2.4,2.5,2.6,2.7,2.8],
+              itemStyle:{color:'#B8141A'}, areaStyle:{color:'rgba(184,20,26,0.15)'}, lineStyle:{width:2.5} },
+            { name:'市场可比', type:'line', smooth:true, data:[1.3,1.55,1.7,1.95,2.15,2.3,2.4,2.55,2.75,2.9], itemStyle:{color:'#0F2A56'}, lineStyle:{width:2, type:'dashed'} },
+            { name:'重置成本', type:'line', smooth:true, data:[1.1,1.4,1.6,1.8,2.0,2.2,2.3,2.4,2.5,2.6], itemStyle:{color:'#C9A063'}, lineStyle:{width:2, type:'dotted'} }
+        ]
+    });
+    window.addEventListener('resize', () => chart.resize());
+})();
+
+// 10年模拟
+(function(){
+    const chart = echarts.init(document.getElementById('chart-sim'));
+    chart.setOption({
+        tooltip: { trigger:'axis' },
+        legend: { data:['资产收益率','杠杆率','累计现金流'], top:0, textStyle:{fontSize:10} },
+        grid: { top: 24, right: 45, bottom: 20, left: 35 },
+        xAxis: { type: 'category', data: ['Y1','Y2','Y3','Y4','Y5','Y6','Y7','Y8','Y9','Y10'], axisLabel:{fontSize:10} },
+        yAxis: [
+            { type:'value', axisLabel:{fontSize:10} },
+            { type:'value', position:'right', axisLabel:{fontSize:10}, splitLine:{show:false} }
+        ],
+        series: [
+            { name:'资产收益率', type:'line', smooth:true, data:[6.2,7.8,9.5,11.2,12.8,13.5,14.2,14.5,14.8,15.1], itemStyle:{color:'#B8141A'}, lineStyle:{width:2.5}, symbol:'circle' },
+            { name:'杠杆率', type:'line', smooth:true, data:[180,175,168,162,155,150,148,145,142,140], itemStyle:{color:'#C9A063'}, yAxisIndex:1, lineStyle:{type:'dashed'} },
+            { name:'累计现金流', type:'bar', data:[1.2,2.7,4.5,6.5,8.7,11.1,13.6,16.2,18.9,21.7], itemStyle:{color:'#0F2A56', opacity:0.3}, barWidth: 10 }
+        ]
+    });
+    window.addEventListener('resize', () => chart.resize());
+})();
+
+// 盘活路径矩阵
+(function(){
+    const data = [
+        { dir:'资源资产化', plan:'特许经营权作价', sce:'景区/停车位特许经营', irr:'11.5%', cyc:'3-5年', cases:86 },
+        { dir:'资源资产化', plan:'数据资源确权', sce:'数据资产入表', irr:'14.2%', cyc:'6-12月', cases:24 },
+        { dir:'资源资产化', plan:'文旅资源开发', sce:'黄山古村落文旅项目', irr:'10.8%', cyc:'5-10年', cases:48 },
+        { dir:'资产证券化', plan:'产业园REITs', sce:'皖能产业园/江汽园区', irr:'13.8%', cyc:'存续期', cases:128 },
+        { dir:'资产证券化', plan:'保租房REITs', sce:'合肥建工保租房', irr:'6.5%', cyc:'存续期', cases:72 },
+        { dir:'资产证券化', plan:'基础设施REITs', sce:'交控高速公路', irr:'8.2%', cyc:'存续期', cases:94 },
+        { dir:'资产证券化', plan:'应收账款ABS', sce:'海螺集团经销商', irr:'4.5%', cyc:'2-5年', cases:168 },
+        { dir:'资产证券化', plan:'数据资产ABS', sce:'古井贡渠道数据', irr:'14.5%', cyc:'5年', cases:6 },
+        { dir:'资金杠杆化', plan:'母基金', sce:'省引导基金', irr:'15.2%', cyc:'10年', cases:42 },
+        { dir:'存量激活', plan:'闲置厂房盘活', sce:'皖北老工业区', irr:'9.8%', cyc:'2-3年', cases:218 }
+    ];
+    const dirColor = { '资源资产化':'#C9A063', '资产证券化':'#B8141A', '资金杠杆化':'#0F2A56', '存量激活':'#2B9348' };
+    document.getElementById('paths-rows').innerHTML = data.map(d => `
+        <tr>
+            <td><span class="wm-badge" style="color:${dirColor[d.dir]};border:1px solid ${dirColor[d.dir]}55;background:${dirColor[d.dir]}0a;">${d.dir}</span></td>
+            <td class="font-semibold text-wm-secondary">${d.plan}</td>
+            <td class="text-xs text-wm-gray">${d.sce}</td>
+            <td class="font-mono font-bold text-wm-primary">${d.irr}</td>
+            <td class="font-mono text-xs">${d.cyc}</td>
+            <td class="font-mono"><span class="font-bold text-wm-secondary">${d.cases}</span><span class="text-xs text-wm-gray3 ml-1">个</span></td>
+        </tr>
+    `).join('');
+})();
+
+// 数据资产ABS饼图
+(function(){
+    const chart = echarts.init(document.getElementById('chart-data-abs'));
+    chart.setOption({
+        tooltip: { trigger:'item' },
+        legend: { orient:'vertical', right:0, top:'center', textStyle:{fontSize:10} },
+        color: ['#B8141A', '#0F2A56', '#C9A063', '#2B9348'],
+        series: [{
+            type: 'pie',
+            radius: ['40%', '68%'],
+            center: ['35%', '50%'],
+            label: { formatter: '{c}亿', fontSize: 10 },
+            data: [
+                { value: 6.5, name: '国央企发行' },
+                { value: 8.2, name: '数据应收' },
+                { value: 5.8, name: '数据授权' },
+                { value: 4.4, name: '其他' }
+            ]
+        }]
+    });
+    window.addEventListener('resize', () => chart.resize());
+})();
+
+// 案例库
+(function(){
+    const data = [
+        { n:'深圳某产业园REITs', s:'深圳国资委', t:'不动产', p:'产业园REITs', a:'22亿', irr:'13.6%', sim:96 },
+        { n:'上海某保租房REITs', s:'上海国资委', t:'不动产', p:'保租房REITs', a:'18亿', irr:'6.8%', sim:92 },
+        { n:'长三角某物流REITs', s:'交控集团', t:'不动产', p:'物流REITs', a:'15亿', irr:'8.2%', sim:88 },
+        { n:'武汉某闲置资产盘活', s:'湖北国资', t:'不动产', p:'租赁+证券化', a:'8亿', irr:'10.5%', sim:84 },
+        { n:'天风中投保数据ABS', s:'央企', t:'数据资产', p:'持有型ABS', a:'4.5亿', irr:'14.2%', sim:82 }
+    ];
+    document.getElementById('cases-rows').innerHTML = data.map(d => `
+        <tr>
+            <td class="font-semibold text-wm-secondary text-xs">${d.n}</td>
+            <td class="text-xs">${d.s}</td>
+            <td><span class="wm-tag">${d.t}</span></td>
+            <td class="text-xs">${d.p}</td>
+            <td class="font-mono font-bold text-wm-primary">${d.a}</td>
+            <td class="font-mono text-emerald-600">${d.irr}</td>
+            <td>
+                <div class="flex items-center gap-2">
+                    <div class="wm-progress" style="width:60px;height:4px;">
+                        <div style="width:${d.sim}%;"></div>
+                    </div>
+                    <span class="font-mono text-xs font-bold" style="color:var(--color-primary);">${d.sim}</span>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+})();
+</script>
+<script>if (window.WM_C && window.WM_C.bindRoleSwitcher) WM_C.bindRoleSwitcher();</script>
+</body>
+</html>

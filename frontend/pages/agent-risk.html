@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>风险防控智能体 - 皖美信用</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<link rel="stylesheet" href="../assets/css/shared.css?v=p3.1">
+<script src="../assets/js/shared.js?v=p3.1"></script>
+<script src="../assets/js/interactions.js?v=p3.1"></script>
+<link rel="stylesheet" href="../assets/css/mvp.css?v=p3.1">
+<link rel="stylesheet" href="../assets/css/ai.css?v=p3.1">
+<script src="../assets/js/mock-data.js?v=p3.1"></script>
+<script src="../assets/js/auth.js?v=p3.1"></script>
+<script src="../assets/js/tickets.js?v=p3.1"></script>
+<script src="../assets/js/phase2.js?v=p3.1"></script>
+<script src="../assets/js/components.js?v=p3.1"></script>
+<script src="../assets/js/ai-client.js?v=p3.1"></script>
+
+<style>
+    .breadcrumb { color: var(--color-text-3); font-size: 12px; }
+    .breadcrumb a { color: var(--color-secondary); text-decoration: none; }
+    .breadcrumb a:hover { color: var(--color-primary); }
+    .breadcrumb .sep { margin: 0 6px; color: var(--color-border-2); }
+    .penetrate-layer {
+        position: relative;
+        padding: 14px 16px;
+        border: 1.5px solid var(--color-border);
+        border-radius: var(--radius-md);
+        background: white;
+        transition: all 0.2s;
+    }
+    .penetrate-layer.l1 { border-left: 4px solid #B8141A; background: linear-gradient(90deg,rgba(184,20,26,0.04),#FFFFFF); }
+    .penetrate-layer.l2 { border-left: 4px solid #0F2A56; margin-left: 30px; background: linear-gradient(90deg,rgba(15,42,86,0.04),#FFFFFF); }
+    .penetrate-layer.l3 { border-left: 4px solid #C9A063; margin-left: 60px; background: linear-gradient(90deg,rgba(201,160,99,0.06),#FFFFFF); }
+    .penetrate-layer::before {
+        content: "";
+        position: absolute;
+        left: 15px;
+        top: -16px;
+        width: 2px;
+        height: 16px;
+        background: var(--color-accent);
+    }
+    .penetrate-layer:first-child::before { display: none; }
+    .risk-cat-card {
+        padding: 14px;
+        background: white;
+        border: 1px solid var(--color-border);
+        border-top: 3px solid var(--cat-color, #B8141A);
+        border-radius: var(--radius-md);
+        transition: all 0.25s;
+    }
+    .risk-cat-card:hover {
+        box-shadow: var(--shadow-md);
+        transform: translateY(-2px);
+    }
+    .alert-item-row {
+        display: grid;
+        grid-template-columns: 16px 70px 1fr 1fr 100px 90px 80px;
+        gap: 10px;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--color-border);
+        font-size: 12px;
+    }
+    .alert-item-row:last-child { border-bottom: none; }
+</style>
+</head>
+<body class="bg-wm-bg">
+<script>if (!window.WM_AUTH || !window.WM_AUTH.guard()) throw new Error("not logged in");</script>
+
+<div id="topbar-root"></div>
+<script>document.getElementById('topbar-root').outerHTML = WM_C.renderAuthTopbar('risk');</script>
+
+<div class="bg-white border-b border-wm px-8 py-3">
+    <nav class="breadcrumb">
+        <a href="index.html">🏠 首页</a><span class="sep">/</span>
+        <a href="index.html">七大智能体</a><span class="sep">/</span>
+        <span style="color:var(--color-primary);font-weight:600;">🛡 风险防控智能体</span>
+    </nav>
+</div>
+
+<div class="flex">
+    <aside class="wm-sidebar" style="width:220px;min-height:calc(100vh - 120px);">
+        <div class="p-4 border-b border-wm">
+            <div class="text-xs text-wm-gray3 tracking-widest">AGENT · MODULE</div>
+            <div class="text-base font-bold text-wm-primary mt-1">风险防控智能体</div>
+            <div class="text-xs text-wm-gray mt-1">战略管控神经中枢</div>
+        </div>
+        <div class="py-2">
+            <div class="sb-item active"><span>🌡</span> 全景风险态势</div>
+            <div class="sb-item"><span>🔍</span> 三穿透分析</div>
+            <div class="sb-item"><span>🚨</span> 预警处置中心</div>
+            <div class="sb-item"><span>🕸</span> 担保圈/资金池图谱</div>
+            <div class="sb-item"><span>⚠</span> 重大事项前置评估</div>
+            <div class="sb-item"><span>📋</span> 合规审查Agent</div>
+            <div class="sb-item"><span>📦</span> 风险处置案例库</div>
+            <div class="sb-item"><span>📄</span> 监管报告中心</div>
+            <a class="sb-item" href="dashboard.html"><span>🧭</span> 智慧监管驾驶舱</a>
+        </div>
+    </aside>
+
+    <main class="flex-1 p-6" style="min-width:0;">
+        <div class="flex items-center justify-between mb-5">
+            <div>
+                <div class="flex items-center gap-3 mb-1">
+                    <h1 class="text-2xl font-bold text-wm-secondary">风险防控工作台</h1>
+                    <span class="wm-badge" style="background:rgba(214,64,69,0.1);color:#D64045;border:1px solid #D6404555;">战略管控神经中枢</span>
+                </div>
+                <div class="text-xs text-wm-gray3">Risk Control Agent · 毫秒级监测 × 三穿透机制 × "事前-事中-事后"全闭环</div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button class="wm-btn wm-btn-ghost wm-btn-sm">🗂 处置案例</button>
+                <button class="wm-btn wm-btn-ghost wm-btn-sm">📊 风险报告</button>
+                <button class="wm-btn wm-btn-gold wm-btn-sm">🤖 AI处置</button>
+                <a href="ticket-new.html?type=risk" class="wm-btn wm-btn-ghost wm-btn-sm" style="text-decoration:none;">＋ 新建处置单</a>
+                <a href="dashboard.html" class="wm-btn wm-btn-primary wm-btn-sm">🧭 进入驾驶舱</a>
+            </div>
+        </div>
+
+        <!-- KPI风险态势 -->
+        <div class="grid grid-cols-6 gap-3 mb-4">
+            <div class="wm-card p-3 text-center" style="background:linear-gradient(135deg,#FFFFFF,rgba(214,64,69,0.06));border-top:3px solid #D64045;">
+                <div class="text-xs text-wm-gray3">红色预警</div>
+                <div class="text-3xl font-bold font-mono" style="color:#D64045;">3</div>
+                <div class="text-xs text-wm-gray3">立即处置</div>
+            </div>
+            <div class="wm-card p-3 text-center" style="background:linear-gradient(135deg,#FFFFFF,rgba(255,140,66,0.06));border-top:3px solid #FF8C42;">
+                <div class="text-xs text-wm-gray3">橙色预警</div>
+                <div class="text-3xl font-bold font-mono" style="color:#FF8C42;">9</div>
+                <div class="text-xs text-wm-gray3">重点关注</div>
+            </div>
+            <div class="wm-card p-3 text-center" style="background:linear-gradient(135deg,#FFFFFF,rgba(232,163,61,0.06));border-top:3px solid #E8A33D;">
+                <div class="text-xs text-wm-gray3">黄色预警</div>
+                <div class="text-3xl font-bold font-mono" style="color:#E8A33D;">15</div>
+                <div class="text-xs text-wm-gray3">持续观察</div>
+            </div>
+            <div class="wm-card p-3 text-center" style="background:linear-gradient(135deg,#FFFFFF,rgba(43,147,72,0.04));border-top:3px solid #2B9348;">
+                <div class="text-xs text-wm-gray3">本月解除</div>
+                <div class="text-3xl font-bold font-mono text-emerald-600">82</div>
+                <div class="text-xs text-wm-gray3">风险闭环</div>
+            </div>
+            <div class="wm-card p-3 text-center" style="background:linear-gradient(135deg,#FFFFFF,rgba(184,20,26,0.04));border-top:3px solid #B8141A;">
+                <div class="text-xs text-wm-gray3">处置闭环率</div>
+                <div class="text-3xl font-bold font-mono text-wm-primary">96.8%</div>
+                <div class="text-xs text-emerald-600">↑ 2.1pct</div>
+            </div>
+            <div class="wm-card p-3 text-center" style="background:linear-gradient(135deg,#FFFFFF,rgba(15,42,86,0.04));border-top:3px solid #0F2A56;">
+                <div class="text-xs text-wm-gray3">穿透覆盖率</div>
+                <div class="text-3xl font-bold font-mono text-wm-secondary">100%</div>
+                <div class="text-xs text-wm-gray3">全级次</div>
+            </div>
+        </div>
+
+        <!-- 七大风险类别 + 三穿透分析 -->
+        <div class="grid grid-cols-12 gap-4 mb-4">
+            <!-- 七大风险类别 -->
+            <div class="wm-card col-span-7">
+                <div class="wm-card-header">
+                    <h3>七大风险类别 · 多维度实时监测</h3>
+                    <div class="flex items-center gap-2 text-xs text-wm-gray3">
+                        <span class="wm-light green wm-pulse"></span>7×24监测中
+                    </div>
+                </div>
+                <div class="p-4 grid grid-cols-4 gap-3" id="cats-grid"></div>
+            </div>
+
+            <!-- 三穿透分析 -->
+            <div class="wm-card col-span-5">
+                <div class="wm-card-header">
+                    <h3>三穿透分析机制 · 翼支付"御风"对标</h3>
+                </div>
+                <div class="p-4 space-y-3">
+                    <div class="p-3 rounded" style="background:linear-gradient(135deg,rgba(184,20,26,0.04),#FFFFFF);border-left:3px solid #B8141A;">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-bold text-wm-primary">① 主体穿透（Entity Penetration）</span>
+                            <span class="wm-badge wm-badge-red">核心</span>
+                        </div>
+                        <div class="text-xs text-wm-gray">国企集团总部→二级子公司→三级及以下企业；识别最终受益人；股权架构全穿透</div>
+                    </div>
+                    <div class="p-3 rounded" style="background:linear-gradient(135deg,rgba(15,42,86,0.04),#FFFFFF);border-left:3px solid #0F2A56;">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-bold text-wm-secondary">② 业务穿透（Business Penetration）</span>
+                            <span class="wm-badge wm-badge-blue">关键</span>
+                        </div>
+                        <div class="text-xs text-wm-gray">沿业务流跟踪：关联交易、担保圈、资金池、内部借贷；识别利益输送链路</div>
+                    </div>
+                    <div class="p-3 rounded" style="background:linear-gradient(135deg,rgba(201,160,99,0.06),#FFFFFF);border-left:3px solid #C9A063;">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-bold" style="color:#A8823E;">③ 数据穿透（Data Penetration）</span>
+                            <span class="wm-badge wm-badge-orange">全域</span>
+                        </div>
+                        <div class="text-xs text-wm-gray">跨业务系统、跨数据源的全链路数据关联分析；对接财务/经营/征信/舆情</div>
+                    </div>
+                    <div class="p-3 rounded text-center" style="background:linear-gradient(135deg,rgba(43,147,72,0.05),#FFFFFF);">
+                        <div class="text-xs text-wm-gray3 mb-1">当前穿透全省国资</div>
+                        <div class="text-xs text-wm-gray">
+                            <span class="text-lg font-bold font-mono text-emerald-600">1,248</span> 家企业 ·
+                            <span class="text-lg font-bold font-mono text-wm-secondary">4,826</span> 个子公司 ·
+                            <span class="text-lg font-bold font-mono" style="color:#A8823E;">12,386</span> 个关联节点
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主体穿透示例 + 担保圈图谱 -->
+        <div class="grid grid-cols-12 gap-4 mb-4">
+            <!-- 主体穿透示例 -->
+            <div class="wm-card col-span-5">
+                <div class="wm-card-header">
+                    <h3>主体穿透示例 · 皖能集团</h3>
+                    <span class="wm-badge wm-badge-blue">三级穿透</span>
+                </div>
+                <div class="p-4 space-y-3">
+                    <div class="penetrate-layer l1">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-bold text-wm-primary">L1 · 集团总部</span>
+                            <span class="wm-badge wm-badge-aaa">AAA</span>
+                        </div>
+                        <div class="text-sm font-semibold text-wm-secondary">安徽皖能集团有限公司</div>
+                        <div class="text-xs text-wm-gray3 mt-1">实控人：安徽省国资委 · 员工 2.3万 · 资产 1,286亿</div>
+                    </div>
+                    <div class="penetrate-layer l2">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-bold text-wm-secondary">L2 · 二级子公司（6家）</span>
+                            <span class="wm-badge wm-badge-green">正常</span>
+                        </div>
+                        <div class="text-xs text-wm-gray space-y-0.5">
+                            <div>• 皖能电力（AA+ · 控股100%）· 皖能煤业（AA · 控股92%）</div>
+                            <div>• 皖能环保（AA · 控股86%）· 皖能新能源（A+ · 控股100%）</div>
+                            <div>• 皖能资本（A+ · 控股100%）· 皖能国际（A · 控股75%）</div>
+                        </div>
+                    </div>
+                    <div class="penetrate-layer l3">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-bold" style="color:#A8823E;">L3 · 三级及以下（28家）</span>
+                            <span class="wm-badge wm-badge-orange">关注 2 家</span>
+                        </div>
+                        <div class="text-xs text-wm-gray">已穿透至 3 级共 28 家子公司，其中<strong class="text-amber-600">皖能电力下属A电厂</strong>需关注环保合规记录</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 担保圈图谱 -->
+            <div class="wm-card col-span-7">
+                <div class="wm-card-header">
+                    <h3>担保圈/资金池智能识别</h3>
+                    <span class="wm-badge wm-badge-orange">检测到 1 个担保圈</span>
+                </div>
+                <div class="p-4">
+                    <div id="chart-guarantee" style="height:340px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 实时预警流 + 风险趋势 -->
+        <div class="grid grid-cols-12 gap-4 mb-4">
+            <!-- 实时预警流 -->
+            <div class="wm-card col-span-7">
+                <div class="wm-card-header">
+                    <h3>实时风险预警流 · "随生随清"闭环</h3>
+                    <span class="wm-badge" style="background:rgba(214,64,69,0.1);color:#D64045;border:1px solid #D6404555;">27 条待处置</span>
+                </div>
+                <div class="p-4" style="max-height:360px;overflow-y:auto;">
+                    <div class="alert-item-row" style="font-weight:600;color:var(--color-text-2);border-bottom:2px solid var(--color-border-2);">
+                        <span></span>
+                        <span>时间</span>
+                        <span>企业</span>
+                        <span>风险类型</span>
+                        <span>触发指标</span>
+                        <span>状态</span>
+                        <span>操作</span>
+                    </div>
+                    <div id="alerts-rows"></div>
+                </div>
+            </div>
+
+            <!-- 风险处置流程可视化 -->
+            <div class="wm-card col-span-5">
+                <div class="wm-card-header">
+                    <h3>风险处置闭环 · 案例驱动演进</h3>
+                </div>
+                <div class="p-4">
+                    <div id="chart-funnel" style="height:260px;"></div>
+                    <div class="mt-2 pt-3 border-t border-wm grid grid-cols-2 gap-2 text-xs">
+                        <div class="p-2 rounded" style="background:rgba(43,147,72,0.05);">
+                            <div class="text-wm-gray3">处置平均耗时</div>
+                            <div class="text-base font-bold font-mono text-emerald-600">3.2 日</div>
+                        </div>
+                        <div class="p-2 rounded" style="background:rgba(184,20,26,0.04);">
+                            <div class="text-wm-gray3">案例库沉淀</div>
+                            <div class="text-base font-bold font-mono text-wm-primary">1,286 例</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 跨智能体协同 + 案例库 -->
+        <div class="grid grid-cols-12 gap-4">
+            <div class="wm-card col-span-5">
+                <div class="wm-card-header">
+                    <h3>跨智能体协同处置（Synergy）</h3>
+                </div>
+                <div class="p-4 space-y-3">
+                    <div class="p-3 rounded" style="background:linear-gradient(135deg,rgba(15,42,86,0.04),#FFFFFF);border-left:3px solid #0F2A56;">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-bold text-wm-secondary">流动性风险 → 融资支持智能体</span>
+                            <span class="wm-badge wm-badge-blue">已触发 5 次</span>
+                        </div>
+                        <div class="text-xs text-wm-gray">自动触发联动制定债务接续方案；对接备用授信</div>
+                    </div>
+                    <div class="p-3 rounded" style="background:linear-gradient(135deg,rgba(184,20,26,0.04),#FFFFFF);border-left:3px solid #B8141A;">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-bold text-wm-primary">评级下滑风险 → 信用优化智能体</span>
+                            <span class="wm-badge wm-badge-red">已触发 3 次</span>
+                        </div>
+                        <div class="text-xs text-wm-gray">启动信用修复机制；智能生成信用提升方案</div>
+                    </div>
+                    <div class="p-3 rounded" style="background:linear-gradient(135deg,rgba(201,160,99,0.06),#FFFFFF);border-left:3px solid #C9A063;">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-bold" style="color:#A8823E;">资产风险 → 三资盘活智能体</span>
+                            <span class="wm-badge wm-badge-orange">已触发 2 次</span>
+                        </div>
+                        <div class="text-xs text-wm-gray">联动制定应急盘活方案，缓解流动性压力</div>
+                    </div>
+                    <div class="p-3 rounded" style="background:linear-gradient(135deg,rgba(43,147,72,0.04),#FFFFFF);border-left:3px solid #2B9348;">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-bold text-emerald-700">重大事项 → 全部六大智能体</span>
+                            <span class="wm-badge wm-badge-green">已触发 8 次</span>
+                        </div>
+                        <div class="text-xs text-wm-gray">重大投资/并购/担保/发债前置调取全量数据进行压力测试</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="wm-card col-span-7">
+                <div class="wm-card-header">
+                    <h3>重大事项前置评估 · 近期</h3>
+                    <span class="text-xs text-wm-gray3">32号令 · 42号令 · 三重一大合规审查</span>
+                </div>
+                <div class="p-4">
+                    <table class="wm-table">
+                        <thead>
+                            <tr><th>事项类型</th><th>主体</th><th>金额</th><th>合规性</th><th>风险等级</th><th>AI建议</th></tr>
+                        </thead>
+                        <tbody id="major-rows"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<div id="footer-root"></div>
+<script>document.getElementById('footer-root').outerHTML = renderFooter();</script>
+
+<script>
+// 七大风险类别
+(function(){
+    const cats = [
+        { name:'信用风险', color:'#B8141A', total:12, red:2, icon:'⭐', desc:'信用评分波动、违约预警、合同履约、舆情异动' },
+        { name:'债务风险', color:'#D64045', total:8, red:1, icon:'💴', desc:'债务规模、长短期占比、到期兑付、流动性' },
+        { name:'经营风险', color:'#E8A33D', total:6, red:0, icon:'📉', desc:'现金流健康度、营收利润偏差、重大经营异常' },
+        { name:'投资风险', color:'#0F2A56', total:4, red:0, icon:'📊', desc:'里程碑完成度、业绩表现、投资回报偏离' },
+        { name:'合规风险', color:'#1F4A8A', total:3, red:0, icon:'⚖', desc:'非法担保、行政处罚、法律诉讼、违规资金占用' },
+        { name:'舆情风险', color:'#C9A063', total:9, red:0, icon:'📰', desc:'负面舆情量、媒体关注度、社交传播、政治敏感' },
+        { name:'重大事项', color:'#A8823E', total:5, red:0, icon:'🚨', desc:'重大投资/担保/资金/交易、重大人事变动' },
+        { name:'三重一大', color:'#2B9348', total:2, red:0, icon:'🏛', desc:'重大决策、重要干部、重要项目、大额资金' }
+    ];
+    document.getElementById('cats-grid').innerHTML = cats.map(c => `
+        <div class="risk-cat-card" style="--cat-color:${c.color};">
+            <div class="flex items-start justify-between mb-2">
+                <span class="text-xl">${c.icon}</span>
+                ${c.red>0?`<span class="wm-badge" style="background:rgba(214,64,69,0.1);color:#D64045;border:1px solid #D6404555;">🔴 ${c.red}</span>`:''}
+            </div>
+            <div class="text-sm font-bold" style="color:${c.color};">${c.name}</div>
+            <div class="flex items-baseline gap-2 mt-1">
+                <span class="text-2xl font-bold font-mono" style="color:${c.color};">${c.total}</span>
+                <span class="text-xs text-wm-gray3">条预警</span>
+            </div>
+            <div class="text-xs text-wm-gray3 mt-2 line-clamp-2" style="line-height:1.4;">${c.desc}</div>
+        </div>
+    `).join('');
+})();
+
+// 担保圈图谱
+(function(){
+    const chart = echarts.init(document.getElementById('chart-guarantee'));
+    const nodes = [
+        { name:'XX建工', symbolSize: 50, category: 0, x: 200, y: 100, itemStyle:{color:'#D64045'}, label:{fontWeight:700} },
+        { name:'XX城投', symbolSize: 40, category: 1, x: 400, y: 80, itemStyle:{color:'#E8A33D'} },
+        { name:'XX地产', symbolSize: 40, category: 1, x: 550, y: 180, itemStyle:{color:'#E8A33D'} },
+        { name:'XX商贸', symbolSize: 38, category: 1, x: 480, y: 300, itemStyle:{color:'#E8A33D'} },
+        { name:'XX能源', symbolSize: 38, category: 1, x: 280, y: 320, itemStyle:{color:'#E8A33D'} },
+        { name:'XX投资', symbolSize: 34, category: 1, x: 150, y: 220, itemStyle:{color:'#E8A33D'} },
+        { name:'合作银行A', symbolSize: 28, category: 2, x: 700, y: 80, itemStyle:{color:'#0F2A56'} },
+        { name:'合作银行B', symbolSize: 28, category: 2, x: 700, y: 300, itemStyle:{color:'#0F2A56'} }
+    ];
+    const links = [
+        { source:'XX建工', target:'XX城投', lineStyle:{color:'#D64045', width:2} },
+        { source:'XX城投', target:'XX地产', lineStyle:{color:'#D64045', width:2} },
+        { source:'XX地产', target:'XX商贸', lineStyle:{color:'#D64045', width:2} },
+        { source:'XX商贸', target:'XX能源', lineStyle:{color:'#D64045', width:2} },
+        { source:'XX能源', target:'XX投资', lineStyle:{color:'#D64045', width:2} },
+        { source:'XX投资', target:'XX建工', lineStyle:{color:'#D64045', width:2.5, type:'dashed'} },
+        { source:'XX建工', target:'XX地产', lineStyle:{color:'#D64045', width:1.5} },
+        { source:'XX城投', target:'合作银行A', lineStyle:{color:'#0F2A56', type:'dotted'} },
+        { source:'XX地产', target:'合作银行A', lineStyle:{color:'#0F2A56', type:'dotted'} },
+        { source:'XX商贸', target:'合作银行B', lineStyle:{color:'#0F2A56', type:'dotted'} }
+    ];
+    chart.setOption({
+        tooltip: {},
+        legend: { data:['核心违约','担保圈成员','债权银行'], bottom: 0, textStyle:{fontSize:11} },
+        series: [{
+            type: 'graph',
+            layout: 'none',
+            roam: true,
+            label: { show: true, position: 'bottom', fontSize: 11 },
+            categories: [
+                { name:'核心违约' },
+                { name:'担保圈成员' },
+                { name:'债权银行' }
+            ],
+            edgeSymbol: ['none','arrow'], edgeSymbolSize: 7,
+            data: nodes, links: links,
+            lineStyle: { width: 1.5 }
+        }]
+    });
+    window.addEventListener('resize', () => chart.resize());
+})();
+
+// 预警流
+(function(){
+    const alerts = [
+        { lv:'red', t:'09:42:15', e:'XX建工集团', c:'债务风险', ind:'到期兑付预警', st:'处置中', p:'张经理' },
+        { lv:'red', t:'09:18:02', e:'XX建工集团', c:'担保圈', ind:'担保节点+2', st:'处置中', p:'李总监' },
+        { lv:'red', t:'08:56:48', e:'XX城投公司', c:'信用风险', ind:'评分下滑56分', st:'已响应', p:'王专员' },
+        { lv:'orange', t:'08:30:12', e:'XX能源集团', c:'担保圈', ind:'跨集团担保', st:'待处置', p:'-' },
+        { lv:'orange', t:'08:05:32', e:'XX商贸公司', c:'舆情风险', ind:'负面舆情3σ', st:'已响应', p:'刘专员' },
+        { lv:'orange', t:'07:40:18', e:'XX制造公司', c:'经营风险', ind:'营收连降3季', st:'监控中', p:'-' },
+        { lv:'orange', t:'07:12:05', e:'XX文旅公司', c:'合规风险', ind:'行政处罚新增', st:'已响应', p:'陈经理' },
+        { lv:'yellow', t:'昨日 23:42', e:'XX科技公司', c:'信用风险', ind:'评分下滑20分', st:'监控中', p:'-' },
+        { lv:'yellow', t:'昨日 22:18', e:'XX贸易公司', c:'投资风险', ind:'业绩承诺未达', st:'监控中', p:'-' },
+        { lv:'yellow', t:'昨日 21:05', e:'XX置业公司', c:'债务风险', ind:'资产负债率升', st:'监控中', p:'-' },
+        { lv:'green', t:'昨日 18:30', e:'XX集团', c:'债务风险', ind:'债务置换完成', st:'✓ 已解除', p:'赵总' }
+    ];
+    const lvColor = { red:'red', orange:'orange', yellow:'yellow', green:'green' };
+    const lvLabel = { red:'🔴 红', orange:'🟠 橙', yellow:'🟡 黄', green:'🟢 解' };
+    document.getElementById('alerts-rows').innerHTML = alerts.map(a => `
+        <div class="alert-item-row" style="${a.lv==='red'?'background:rgba(214,64,69,0.03);':''}">
+            <span class="wm-light ${lvColor[a.lv]}" style="width:8px;height:8px;"></span>
+            <span class="font-mono text-wm-gray3" style="font-size:11px;">${a.t}</span>
+            <span class="font-semibold text-wm-secondary truncate">${a.e}</span>
+            <span class="text-wm-gray">${a.c}</span>
+            <span class="text-wm-gray text-xs truncate">${a.ind}</span>
+            <span>${a.st==='已响应'||a.st==='监控中'?`<span class="wm-badge wm-badge-blue">${a.st}</span>`:a.st==='处置中'?`<span class="wm-badge wm-badge-orange">${a.st}</span>`:a.st==='待处置'?`<span class="wm-badge wm-badge-red">${a.st}</span>`:`<span class="wm-badge wm-badge-green">${a.st}</span>`}</span>
+            <span class="text-xs text-wm-gray3">${a.p}</span>
+        </div>
+    `).join('');
+})();
+
+// 漏斗图：风险处置闭环
+(function(){
+    const chart = echarts.init(document.getElementById('chart-funnel'));
+    chart.setOption({
+        tooltip: { trigger: 'item', formatter:'{b}<br/>{c} 条' },
+        color: ['#D64045', '#FF8C42', '#E8A33D', '#0F2A56', '#2B9348'],
+        series: [{
+            type: 'funnel',
+            left: '5%', top: 10, bottom: 20, width: '90%',
+            min: 0, max: 100,
+            sort: 'descending',
+            gap: 2,
+            label: { show: true, position: 'inside', color: 'white', fontWeight: 700, fontSize: 11 },
+            data: [
+                { value: 100, name: '实时监测（每日 3,860 信号）' },
+                { value: 86, name: 'AI识别分级（86 条）' },
+                { value: 72, name: '多渠道预警推送' },
+                { value: 58, name: '处置方案生成' },
+                { value: 52, name: '闭环完成（案例沉淀）' }
+            ]
+        }]
+    });
+    window.addEventListener('resize', () => chart.resize());
+})();
+
+// 重大事项
+(function(){
+    const items = [
+        { t:'重大投资', m:'建工集团', a:'12亿', c:'✓ 合规', r:'低', rec:'批准' },
+        { t:'对外担保', m:'交控集团', a:'8亿', c:'⚠ 关注', r:'中', rec:'增加反担保' },
+        { t:'大额资金', m:'皖企投集团', a:'18亿', c:'✓ 合规', r:'低', rec:'批准' },
+        { t:'资产转让', m:'港航集团', a:'5亿', c:'⚠ 关注', r:'中', rec:'竞价程序' },
+        { t:'债券发行', m:'皖能集团', a:'50亿', c:'✓ 合规', r:'低', rec:'批准' },
+        { t:'并购重组', m:'江汽集团', a:'11亿', c:'✓ 合规', r:'中', rec:'关注整合' }
+    ];
+    document.getElementById('major-rows').innerHTML = items.map(i => `
+        <tr>
+            <td><span class="wm-badge wm-badge-blue">${i.t}</span></td>
+            <td class="font-semibold text-wm-secondary">${i.m}</td>
+            <td class="font-mono font-bold text-wm-primary">${i.a}</td>
+            <td class="text-xs ${i.c.startsWith('✓')?'text-emerald-600':'text-amber-600'}">${i.c}</td>
+            <td><span class="wm-badge ${i.r==='低'?'wm-badge-green':'wm-badge-orange'}">${i.r}</span></td>
+            <td class="text-xs text-wm-gray">${i.rec}</td>
+        </tr>
+    `).join('');
+})();
+</script>
+<script>if (window.WM_C && window.WM_C.bindRoleSwitcher) WM_C.bindRoleSwitcher();</script>
+</body>
+</html>

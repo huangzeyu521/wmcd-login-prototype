@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>待办中心 - 皖美信用</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="../assets/css/shared.css?v=p3.1">
+<link rel="stylesheet" href="../assets/css/mvp.css?v=p3.1">
+<link rel="stylesheet" href="../assets/css/ai.css?v=p3.1">
+<script src="../assets/js/shared.js?v=p3.1"></script>
+<script src="../assets/js/interactions.js?v=p3.1"></script>
+<script src="../assets/js/mock-data.js?v=p3.1"></script>
+<script src="../assets/js/auth.js?v=p3.1"></script>
+<script src="../assets/js/tickets.js?v=p3.1"></script>
+<script src="../assets/js/phase2.js?v=p3.1"></script>
+<script src="../assets/js/components.js?v=p3.1"></script>
+<script src="../assets/js/ai-client.js?v=p3.1"></script>
+</head>
+<body class="bg-wm-bg">
+
+<script>if (!window.WM_AUTH.guard()) throw new Error('not logged in');</script>
+
+<div id="topbar-root"></div>
+<script>document.getElementById('topbar-root').outerHTML = WM_C.renderAuthTopbar('todos');</script>
+
+<main class="px-8 py-6 max-w-[1600px] mx-auto">
+    <div class="flex items-center justify-between mb-5">
+        <div>
+            <h1 class="text-2xl font-bold text-wm-secondary">✓ 待办中心</h1>
+            <div class="text-xs text-wm-gray3 mt-1">所有需要您处理的任务 · 按优先级排序</div>
+        </div>
+        <div class="flex items-center gap-2">
+            <div class="wm-tabs" id="filter-tabs">
+                <div class="wm-tab active" data-filter="all">全部 <span id="count-all" class="ml-1 wm-badge-count" style="background:#7A7A7A;">0</span></div>
+                <div class="wm-tab" data-filter="approval">待审批 <span id="count-approval" class="ml-1 wm-badge-count" style="background:#E8A33D;">0</span></div>
+                <div class="wm-tab" data-filter="draft">草稿/驳回 <span id="count-draft" class="ml-1 wm-badge-count" style="background:#D64045;">0</span></div>
+                <div class="wm-tab" data-filter="execute">待处理 <span id="count-execute" class="ml-1 wm-badge-count" style="background:#0F2A56;">0</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 紧急区 -->
+    <div id="urgent-section" class="mb-5" style="display:none;">
+        <div class="wm-section-title">
+            <h2 style="color:#D64045;">🔥 紧急处理</h2>
+            <span class="sub">需立即响应</span>
+        </div>
+        <div class="space-y-2" id="urgent-list"></div>
+    </div>
+
+    <!-- 主列表 -->
+    <div class="wm-card">
+        <div class="p-4 space-y-2" id="main-list">
+            <div class="wm-empty"><div class="empty-icon">✨</div><div class="empty-title">加载中…</div></div>
+        </div>
+    </div>
+</main>
+
+<div id="footer-root"></div>
+<script>document.getElementById('footer-root').outerHTML = renderFooter();</script>
+
+<script>
+const user = window.WM_AUTH.currentUser();
+WM_C.bindRoleSwitcher();
+
+let currentFilter = 'all';
+
+function render() {
+    const todos = window.WM_TICKETS.myTodos();
+
+    // 计数
+    document.getElementById('count-all').textContent = todos.length;
+    document.getElementById('count-approval').textContent = todos.filter(t => t.type === 'approval').length;
+    document.getElementById('count-draft').textContent = todos.filter(t => t.type === 'draft').length;
+    document.getElementById('count-execute').textContent = todos.filter(t => t.type === 'execute').length;
+
+    // 紧急
+    const urgent = todos.filter(t => t.priority === 'urgent');
+    document.getElementById('urgent-section').style.display = urgent.length ? 'block' : 'none';
+    document.getElementById('urgent-list').innerHTML = urgent.map(t => WM_C.todoItem(t)).join('');
+
+    // 主列表（按过滤条件）
+    let list = todos.filter(t => t.priority !== 'urgent');
+    if (currentFilter !== 'all') {
+        list = list.filter(t => t.type === currentFilter);
+    }
+
+    const main = document.getElementById('main-list');
+    if (list.length === 0) {
+        main.innerHTML = `<div class="wm-empty"><div class="empty-icon">✨</div><div class="empty-title">暂无待办</div><div class="empty-desc">所有任务已处理完毕</div></div>`;
+    } else {
+        main.innerHTML = list.map(t => WM_C.todoItem(t)).join('');
+    }
+}
+
+document.querySelectorAll('#filter-tabs .wm-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('#filter-tabs .wm-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentFilter = tab.getAttribute('data-filter');
+        render();
+    });
+});
+
+render();
+</script>
+</body>
+</html>
