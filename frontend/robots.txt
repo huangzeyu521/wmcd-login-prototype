@@ -1,0 +1,7 @@
+User-agent: *
+Disallow: /
+
+# This is a UI/UX design prototype · not an official government site.
+# Search engine indexing is disabled to avoid confusion with the real
+# Anhui SASAC platform. If you crawled here by accident, please remove
+# any cached copies.

@@ -1,1 +1,1 @@
-{"version": 2, "name": "creditagent7", "build": {"command": "", "output_directory": "frontend"}}
+{"framework": {"name": "static", "presets": {}}, "build": {"command": "", "output_directory": "."}}
